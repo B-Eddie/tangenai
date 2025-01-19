@@ -11,7 +11,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!companies.trim() || !minConfidence.trim()) {
+    if (!companies.trim()) {
       return;
     }
 
@@ -24,7 +24,6 @@ export default function Home() {
         },
         body: JSON.stringify({
           companies: companies.split(','),
-          min_confidence: parseFloat(minConfidence),
           investing_horizon: investingHorizon,
         }),
       });
