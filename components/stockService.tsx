@@ -29,20 +29,33 @@ const axiosInstance = axios.create({
   }
 });
 
-// Rate limiting
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sanitizeSymbol = (symbol: string): string => {
+  // Remove exchange extensions and normalize
+  return symbol.split('.')[0];
+};
 
-// individual stock data
 export const getStockData = async (symbol: string): Promise<StockData | null> => {
   try {
-    const response = await axiosInstance.get(`${BASE_URL}${symbol}`);
+    const cleanSymbol = sanitizeSymbol(symbol);
+    const response = await axiosInstance.get(`${BASE_URL}${cleanSymbol}?interval=1d&range=1d`);
     const data = response.data.chart.result[0];
     
+    if (!data || !data.meta) {
+      console.error(`Invalid data structure for ${cleanSymbol}`);
+      return null;
+    }
+
+    const currentPrice = data.meta.regularMarketPrice;
+    const previousClose = data.meta.chartPreviousClose;
+    const changePercent = previousClose ? 
+      ((currentPrice - previousClose) / previousClose) * 100 : 
+      null;
+
     return {
-      symbol,
-      name: data.meta.shortName || symbol,
-      price: data.meta.regularMarketPrice || null,
-      changePercent: data.meta.regularMarketChangePercent || null,
+      symbol: cleanSymbol,
+      name: data.meta.shortName || cleanSymbol,
+      price: currentPrice || null,
+      changePercent: changePercent,
       volume: data.meta.regularMarketVolume || null
     };
   } catch (error) {
@@ -51,16 +64,18 @@ export const getStockData = async (symbol: string): Promise<StockData | null> =>
   }
 };
 
+
 export const searchStocks = async (query: string): Promise<SearchResult[]> => {
   try {
-    const response = await axiosInstance.get(SEARCH_URL, {
-      params: {
-        q: query,
-        quotesCount: 10,
-        lang: 'en-US'
-      }
-    });
+    const encodedQuery = encodeURIComponent(query);
+    const url = `${SEARCH_URL}?q=${encodedQuery}&newsCount=0&quotesCount=10&enableFuzzyQuery=false&quotesQueryId=tss_match_phrase_query`;
     
+    const response = await axiosInstance.get(url);
+
+    if (!response.data || !response.data.quotes) {
+      return [];
+    }
+
     return response.data.quotes
       .filter((quote: any) => quote.quoteType === 'EQUITY')
       .map((quote: any) => ({
@@ -68,6 +83,7 @@ export const searchStocks = async (query: string): Promise<SearchResult[]> => {
         name: quote.shortname || quote.longname || quote.symbol,
         quoteType: quote.quoteType
       }));
+
   } catch (error) {
     console.error('Error searching stocks:', error);
     return [];
