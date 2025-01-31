@@ -41,54 +41,44 @@ export default function Home() {
   }, [companies]);
 
   const fetchStockData = async (ticker: string) => {
+    const CORS_PROXY = "https://corsproxy.io/?";
+
     setLoading(true);
     try {
-      const options = {
-        method: "GET",
-        url: `https://yahoo-finance15.p.rapidapi.com/api/yahoo/hi/history/${ticker}/1d`,
-        headers: {
-          "X-RapidAPI-Key": process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
-          "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com",
-        },
+      const cleanTicker = ticker.trim().toUpperCase();
+      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${cleanTicker}?range=7d&interval=1d&includePrePost=false`;
+      const fullUrl = `${CORS_PROXY}${encodeURIComponent(targetUrl)}`;
+
+      const response = await axios.get(fullUrl);
+      const result = response.data.chart.result[0];
+
+      if (!result) throw new Error("No data available");
+
+      const timestamps = result.timestamp || [];
+      const quotes = result.indicators.quote[0] || {
+        open: [],
+        high: [],
+        low: [],
+        close: [],
       };
 
-      const response = await axios.request(options);
-      const items = response.data.items;
+      const formattedData = timestamps.map((time: number, i: number) => ({
+        date: new Date(time * 1000).toISOString(),
+        open: quotes.open[i] || 0,
+        high: quotes.high[i] || 0,
+        low: quotes.low[i] || 0,
+        close: quotes.close[i] || 0,
+      }));
 
-      if (items) {
-        const formattedData = Object.entries(items).map(
-          ([timestamp, item]: [string, any]) => ({
-            date: item.date,
-            value: parseFloat(item.close), // Add value for LineChart
-            open: item.open,
-            high: item.high,
-            low: item.low,
-            close: item.close,
-            label: `$${item.close}`, // Add label for data points
-            dataPointText: item.close.toFixed(2), // Add text for data points
-          })
-        );
-
-        const sortedData = formattedData.sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-
-        // Take last 30 days of data
-        const recentData = sortedData.slice(-30);
-        setStockData(recentData);
-      } else {
-        setStockData([]);
-      }
+      setStockData(formattedData);
     } catch (error) {
-      console.error(
-        "Error:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      console.error("Error fetching stock data:", error);
       setStockData([]);
     } finally {
       setLoading(false);
     }
   };
+
   const handleSubmit = async () => {
     if (!companies.trim()) {
       return;
@@ -147,7 +137,8 @@ export default function Home() {
         onChangeText={setCompanies}
         mode="outlined"
         style={styles.input}
-        placeholder="NVDA, TLSA, GOOGL"
+        placeholder="NVDA"
+        placeholderTextColor="#999999"
         outlineColor={theme.colors.border}
         activeOutlineColor={theme.colors.primary}
       />

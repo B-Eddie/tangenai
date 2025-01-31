@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { View, StyleSheet, Text } from "react-native";
-import { LineChart } from "react-native-gifted-charts";
+// components/StockChart.tsx
+import { View, StyleSheet, Text, useWindowDimensions } from "react-native";
+import { LineChart } from "react-native-chart-kit";
+import { useMemo } from "react";
 
 interface StockData {
   date: string;
@@ -13,15 +14,29 @@ interface StockData {
 interface StockChartProps {
   data: StockData[];
   type: "line" | "candlestick";
-  onSelect: (item: StockData) => void;
 }
 
-const StockChart: React.FC<StockChartProps> = ({
-  data = [],
-  type,
-  onSelect,
-}) => {
-  const [selectedPoint, setSelectedPoint] = useState<StockData | null>(null);
+const StockChart: React.FC<StockChartProps> = ({ data = [], type }) => {
+  const { width: screenWidth } = useWindowDimensions();
+
+  const chartData = useMemo(() => ({
+    labels: data.map(item => 
+      new Date(item.date).toLocaleDateString("en-US", { 
+        month: "short", 
+        day: "numeric" 
+      })
+    ),
+    datasets: [{
+      data: data.map(item => type === 'candlestick' ? [
+        item.open,
+        item.high,
+        item.low,
+        item.close
+      ] : item.close),
+      color: (opacity = 1) => `rgba(255, 69, 0, ${opacity})`,
+      strokeWidth: 2
+    }]
+  }), [data, type]);
 
   if (!Array.isArray(data) || data.length === 0) {
     return (
@@ -31,33 +46,32 @@ const StockChart: React.FC<StockChartProps> = ({
     );
   }
 
-  const chartData = data.map((item) => ({
-    value: item.close,
-    date: item.date,
-    dataPointText: item.close.toFixed(2),
-  }));
-
   return (
     <View style={styles.chartWrapper}>
       <LineChart
         data={chartData}
-        height={200}
-        width={200}
-        spacing={1.9}
-        initialSpacing={10}
-        color="#FF4500"
-        thickness={2}
-        startFillColor="#FF450020"
-        endFillColor="#FF450000"
-        startOpacity={0.9}
-        endOpacity={0.2}
-        backgroundColor="transparent"
-        rulesType="solid"
-        rulesColor="#eda182"
-        yAxisColor="#eda182"
-        xAxisColor="#eda182"
-        hideDataPoints
-        curved
+        width={screenWidth}
+        height={220}
+        yAxisLabel="$"
+        yAxisSuffix=""
+        chartConfig={{
+          backgroundColor: "#F4DEAD",
+          backgroundGradientFrom: "#F4DEAD",
+          backgroundGradientTo: "#F4DEAD",
+          decimalPlaces: 2,
+          color: (opacity = 1) => `rgba(237, 161, 130, ${opacity})`,
+          labelColor: (opacity = 0.5) => `rgba(228, 93, 40, ${opacity})`,
+          style: {
+            borderRadius: 16
+          },
+          propsForDots: {
+            r: "0" // Hide dots
+          }
+        }}
+        bezier
+        style={styles.chart}
+        verticalLabelRotation={-45}
+        xLabelsOffset={10}
       />
     </View>
   );
@@ -65,50 +79,14 @@ const StockChart: React.FC<StockChartProps> = ({
 
 const styles = StyleSheet.create({
   chartWrapper: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
     marginVertical: 10,
-  },
-  noDataText: {
-    textAlign: "center",
-    color: "#666",
-    marginTop: 20,
-    fontSize: 16,
-  },
-  labelText: {
-    color: "#666",
-    fontSize: 10,
-    transform: [{ rotate: "-45deg" }],
-    width: 50,
-    marginLeft: -25,
-  },
-  tooltipContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "#f5f5f5",
     borderRadius: 8,
+    overflow: 'hidden',
   },
-  tooltipDate: {
-    fontWeight: "bold",
-    fontSize: 14,
-    marginBottom: 8,
-    color: "#333",
-  },
-  tooltipPrice: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 4,
-  },
-  yAxisText: {
-    color: "#666",
-    fontSize: 12,
-  },
-  xAxisText: {
-    color: "#666",
-    fontSize: 10,
-  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16
+  }
 });
 
 export default StockChart;

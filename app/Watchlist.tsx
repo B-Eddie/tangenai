@@ -155,7 +155,7 @@ export default function Watchlist() {
   };
 
   const generateUniqueId = (prefix: string, symbol: string, index: number) => {
-    return `${prefix}-${symbol}-${index}-${crypto.randomUUID()}`;
+    return `${prefix}-${symbol}-${index}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   };
 
   return (
