@@ -15,18 +15,27 @@ interface SearchResult {
   quoteType: string;
 }
 
-// API Endpoints
-const BASE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart/';
-const SEARCH_URL = 'https://query1.finance.yahoo.com/v1/finance/search';
-const MOVERS_URL = 'https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved';
+// API Configuration
+const CORS_PROXY = 'https://corsproxy.io/?';
+const BASE_URL = CORS_PROXY + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/');
+const SEARCH_URL = CORS_PROXY + encodeURIComponent('https://query1.finance.yahoo.com/v1/finance/search');
+const MOVERS_URL = CORS_PROXY + encodeURIComponent('https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved');
 
-// Utility function for rate limiting
+const axiosInstance = axios.create({
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+});
+
+// Rate limiting
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Get individual stock data
+// individual stock data
 export const getStockData = async (symbol: string): Promise<StockData | null> => {
   try {
-    const response = await axios.get(`${BASE_URL}${symbol}`);
+    const response = await axiosInstance.get(`${BASE_URL}${symbol}`);
     const data = response.data.chart.result[0];
     
     return {
@@ -42,10 +51,9 @@ export const getStockData = async (symbol: string): Promise<StockData | null> =>
   }
 };
 
-// Search stocks
 export const searchStocks = async (query: string): Promise<SearchResult[]> => {
   try {
-    const response = await axios.get(SEARCH_URL, {
+    const response = await axiosInstance.get(SEARCH_URL, {
       params: {
         q: query,
         quotesCount: 10,
@@ -65,58 +73,51 @@ export const searchStocks = async (query: string): Promise<SearchResult[]> => {
     return [];
   }
 };
+
 export const getHotStocks = async (): Promise<StockData[]> => {
-    try {
-        // Fetch gainers, losers, and most active stocks
-        const [gainersResponse, losersResponse, activesResponse] = await Promise.all([
-            axios.get(`${MOVERS_URL}?formatted=true&scrIds=day_gainers&count=10`),
-            axios.get(`${MOVERS_URL}?formatted=true&scrIds=day_losers&count=10`),
-            axios.get(`${MOVERS_URL}?formatted=true&scrIds=most_actives&count=10`)
-        ]);
+  try {
+    const [gainersResponse, losersResponse, activesResponse] = await Promise.all([
+      axiosInstance.get(`${MOVERS_URL}?formatted=true&scrIds=day_gainers&count=10`),
+      axiosInstance.get(`${MOVERS_URL}?formatted=true&scrIds=day_losers&count=10`),
+      axiosInstance.get(`${MOVERS_URL}?formatted=true&scrIds=most_actives&count=10`)
+    ]);
 
-        const gainers = gainersResponse.data?.finance?.result?.[0]?.quotes || [];
-        const losers = losersResponse.data?.finance?.result?.[0]?.quotes || [];
-        const actives = activesResponse.data?.finance?.result?.[0]?.quotes || [];
+    const gainers = gainersResponse.data?.finance?.result?.[0]?.quotes || [];
+    const losers = losersResponse.data?.finance?.result?.[0]?.quotes || [];
+    const actives = activesResponse.data?.finance?.result?.[0]?.quotes || [];
 
-        // Combine and remove duplicates, then sort by absolute value of change percentage
-        const combined = [...new Map([...gainers, ...losers, ...actives]
-            .map(item => [item.symbol, item]))
-            .values()]
-            .sort((a, b) => Math.abs(b.regularMarketChangePercent?.raw || 0) - Math.abs(a.regularMarketChangePercent?.raw || 0))
-            .slice(0, 15);
-        
-        // Transform to StockData format with null checks
-        console.log('Combined stocks before mapping:', combined);
-        const hotStocks = combined.map(stock => ({
-            symbol: stock.symbol,
-            name: stock.shortName || stock.symbol,
-            price: stock.regularMarketPrice?.raw || null,
-            changePercent: stock.regularMarketChangePercent?.raw || null,
-            volume: stock.regularMarketVolume?.raw || null
-        }));
-        console.log('Mapped hot stocks:', hotStocks);
+    const combined = [...new Map([...gainers, ...losers, ...actives]
+      .map(item => [item.symbol, item]))
+      .values()]
+      .sort((a, b) => Math.abs(b.regularMarketChangePercent?.raw || 0) - Math.abs(a.regularMarketChangePercent?.raw || 0))
+      .slice(0, 15);
 
-        return hotStocks;
-    } catch (error) {
-        console.error('Error fetching hot stocks:', error);
-        return [];
-    }
+    return combined.map(stock => ({
+      symbol: stock.symbol,
+      name: stock.shortName || stock.symbol,
+      price: stock.regularMarketPrice?.raw || null,
+      changePercent: stock.regularMarketChangePercent?.raw || null,
+      volume: stock.regularMarketVolume?.raw || null
+    }));
+  } catch (error) {
+    console.error('Error fetching hot stocks:', error);
+    return [];
+  }
 };
 
-// Get market movers (gainers or losers)
 export const getMarketMovers = async (type: 'gainers' | 'losers'): Promise<StockData[]> => {
   try {
     const scrId = type === 'gainers' ? 'day_gainers' : 'day_losers';
-    const response = await axios.get(`${MOVERS_URL}?formatted=true&scrIds=${scrId}&count=10`);
+    const response = await axiosInstance.get(`${MOVERS_URL}?formatted=true&scrIds=${scrId}&count=10`);
     
     const movers = response.data?.finance?.result?.[0]?.quotes || [];
     
     return movers.map((stock: any) => ({
       symbol: stock.symbol,
       name: stock.shortName || stock.symbol,
-      price: stock.regularMarketPrice || null,
-      changePercent: stock.regularMarketChangePercent || null,
-      volume: stock.regularMarketVolume || null
+      price: stock.regularMarketPrice?.raw || null,
+      changePercent: stock.regularMarketChangePercent?.raw || null,
+      volume: stock.regularMarketVolume?.raw || null
     }));
   } catch (error) {
     console.error(`Error fetching ${type}:`, error);
@@ -124,10 +125,9 @@ export const getMarketMovers = async (type: 'gainers' | 'losers'): Promise<Stock
   }
 };
 
-// Get real-time stock price updates
 export const getRealtimeUpdate = async (symbol: string): Promise<Partial<StockData> | null> => {
   try {
-    const response = await axios.get(`${BASE_URL}${symbol}?interval=1m&range=1d`);
+    const response = await axiosInstance.get(`${BASE_URL}${symbol}?interval=1m&range=1d`);
     const data = response.data.chart.result[0];
     
     return {
@@ -138,4 +138,12 @@ export const getRealtimeUpdate = async (symbol: string): Promise<Partial<StockDa
     console.error(`Error fetching realtime update for ${symbol}:`, error);
     return null;
   }
+};
+
+export default {
+  getStockData,
+  searchStocks,
+  getHotStocks,
+  getMarketMovers,
+  getRealtimeUpdate
 };
