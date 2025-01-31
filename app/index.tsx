@@ -80,10 +80,11 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
+    console.log("TESTING");
     if (!companies.trim()) {
       return;
     }
-
+  
     setLoading(true);
     try {
       const response = await fetch(
@@ -99,21 +100,18 @@ export default function Home() {
           }),
         }
       );
-
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+  
       const data = await response.json();
       router.push({
         pathname: "/recommendations",
         params: { data: JSON.stringify(data) },
       });
     } catch (error) {
-      console.error(
-        "Error:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
+      console.error("Error:", error);
     } finally {
       setLoading(false);
     }
