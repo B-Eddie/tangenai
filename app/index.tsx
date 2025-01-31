@@ -6,7 +6,6 @@ import { theme } from "../components/theme";
 import { Dropdown } from "react-native-element-dropdown";
 import StockChart from "../components/StockChart";
 import axios from "axios";
-import { RAPIDAPI_KEY } from "@env"; // Import the environment variable
 
 interface StockData {
   date: string;
@@ -48,7 +47,7 @@ export default function Home() {
         method: "GET",
         url: `https://yahoo-finance15.p.rapidapi.com/api/yahoo/hi/history/${ticker}/1d`,
         headers: {
-          "X-RapidAPI-Key": RAPIDAPI_KEY,
+          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
           "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com",
         },
       };

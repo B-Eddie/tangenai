@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import axios from "axios";
-import { RAPIDAPI_KEY } from "@env";
 import { theme } from "../components/theme";
 import StockChart from "../components/StockChart";
 import Slider from "@react-native-community/slider";
@@ -73,7 +72,7 @@ export default function ExploreStocks() {
         method: "GET",
         url: `https://yahoo-finance15.p.rapidapi.com/api/yahoo/qu/quote/${ticker}`,
         headers: {
-          "X-RapidAPI-Key": RAPIDAPI_KEY,
+          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
           "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com",
         },
       };
