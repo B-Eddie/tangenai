@@ -47,7 +47,7 @@ export default function Home() {
         method: "GET",
         url: `https://yahoo-finance15.p.rapidapi.com/api/yahoo/hi/history/${ticker}/1d`,
         headers: {
-          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+          "X-RapidAPI-Key": process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
           "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com",
         },
       };

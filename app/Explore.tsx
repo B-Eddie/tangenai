@@ -72,7 +72,7 @@ export default function ExploreStocks() {
         method: "GET",
         url: `https://yahoo-finance15.p.rapidapi.com/api/yahoo/qu/quote/${ticker}`,
         headers: {
-          "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+          "X-RapidAPI-Key": process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
           "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com",
         },
       };
