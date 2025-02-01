@@ -27,6 +27,7 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [stockData, setStockData] = useState<StockData[]>([]);
   const [chartType, setChartType] = useState<"line" | "candlestick">("line");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -80,38 +81,44 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
-    console.log("TESTING");
     if (!companies.trim()) {
+      setError("Please enter a company ticker");
       return;
     }
-  
+
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(
-        "https://tangen-api.onrender.com/recommend",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            companies: companies.split(",").map((company) => company.trim()),
-            investing_horizon: investingHorizon,
-          }),
-        }
-      );
-  
+      const API_URL = "https://moc.hackclub.app/recommend";
+
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          companies: companies.split(",").map((company) => company.trim()),
+          investing_horizon: investingHorizon,
+        }),
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
+
       const data = await response.json();
       router.push({
         pathname: "/recommendations",
-        params: { data: JSON.stringify(data) },
+        params: {
+          data: JSON.stringify({
+            recommendations: data.recommendations,
+            metadata: data.metadata,
+          }),
+        },
       });
     } catch (error) {
       console.error("Error:", error);
+      setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -166,6 +173,12 @@ export default function Home() {
         <Text style={styles.noDataText}>
           Enter a ticker symbol to view the chart.
         </Text>
+      )}
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
       )}
 
       <Button
@@ -241,5 +254,16 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginLeft: 20,
     color: "#666",
+  },
+  errorContainer: {
+    backgroundColor: "rgba(255, 0, 0, 0.1)",
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 10,
+  },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    fontSize: 14,
   },
 });

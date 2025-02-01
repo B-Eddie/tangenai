@@ -130,7 +130,8 @@ export default function ExploreStocks() {
 
       // Get scores from Tangen API
       const tangenResponse = await fetch(
-        "https://tangen-api.onrender.com/recommend",
+        // "https://tangen-api.onrender.com/recommend",
+        "https://moc.hackclub.app/recommend",
         {
           method: "POST",
           headers: {
