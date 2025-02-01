@@ -7,6 +7,8 @@ import { Dropdown } from "react-native-element-dropdown";
 import StockChart from "../../components/StockChart";
 import axios from "axios";
 import { APIContext } from '../_layout';
+import { getStockRecommendation } from '../services/stockService';
+
 
 interface StockData {
   date: string;
@@ -92,30 +94,22 @@ export default function Home() {
 
     setLoading(true);
     setError(null);
+    
     try {
-      // const API_URL = "https://moc.hackclub.app/recommend";
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          companies: companies.split(",").map((company) => company.trim()),
-          investing_horizon: investingHorizon,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      console.log(response);
-      const data = await response.json();
-      console.log(data);
-
+      const recommendations = await getStockRecommendation(
+        companies.split(",").map(c => c.trim().toUpperCase()),
+        investingHorizon
+      );
+      const recommendationsData = await getStockRecommendation(
+        companies.split(",").map(c => c.trim().toUpperCase()),
+        investingHorizon
+      );
+      
       router.push({
         pathname: "../recommendations",
-        params: { data: JSON.stringify(data) },
+        params: { data: JSON.stringify(recommendationsData) },
       });
+      
     } catch (error) {
       console.error("Error:", error);
       setError(error instanceof Error ? error.message : "An error occurred");
@@ -123,6 +117,7 @@ export default function Home() {
       setLoading(false);
     }
   };
+
 
   const dropdownData: DropdownItem[] = [
     { label: "Short-term (30 days)", value: "short-term" },
