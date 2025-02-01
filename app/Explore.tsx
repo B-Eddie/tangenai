@@ -99,6 +99,73 @@ export default function ExploreStocks() {
     }
   };
 
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // First, fetch a list of stocks from Yahoo Finance API
+      const stockListResponse = await axios.get(
+        "https://yahoo-finance15.p.rapidapi.com/api/yahoo/market/get-quotes", 
+        {
+          params: {
+            region: "US",
+            lang: "en",
+            symbols: "AAPL,MSFT,GOOGL,AMZN,FB,TSLA,JPM,JNJ,WMT,PG" // Add more symbols as needed
+          },
+          headers: {
+            "X-RapidAPI-Key": process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
+            "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com"
+          }
+        }
+      );
+
+      const stocks = stockListResponse.data.body;
+      const filteredStocks = stocks.filter(stock => {
+        const price = stock.regularMarketPrice;
+        return (
+          (!minCost || price >= parseFloat(minCost)) &&
+          (!maxCost || price <= parseFloat(maxCost)) &&
+          (selectedSector === "All" || stock.sector === selectedSector)
+        );
+      });
+
+      // Get scores from Tangen API
+      const tangenResponse = await fetch(
+        "https://tangen-api.onrender.com/recommend",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            companies: filteredStocks.map(stock => stock.symbol),
+            risk_level: riskLevel,
+            min_confidence: confidence
+          }),
+        }
+      );
+
+      if (!tangenResponse.ok) {
+        throw new Error(`HTTP error! status: ${tangenResponse.status}`);
+      }
+
+      const scoreData = await tangenResponse.json();
+      
+      // Update the UI with matched stocks and their scores
+      setStockData(scoreData.recommendations.map(rec => ({
+        symbol: rec.symbol,
+        score: rec.score,
+        confidence: rec.confidence,
+        risk: rec.risk
+      })));
+
+    } catch (error) {
+      console.error("Error:", error);
+      setError(error instanceof Error ? error.message : "Failed to fetch stocks");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScrollView
       style={styles.container}
@@ -204,7 +271,7 @@ export default function ExploreStocks() {
 
       <Button
         mode="contained"
-        // onPress={handleSubmit}
+        onPress={handleSubmit}
         loading={loading}
         disabled={loading}
         style={styles.button}
