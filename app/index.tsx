@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
 import { theme } from "../components/theme";
 import { Dropdown } from "react-native-element-dropdown";
 import StockChart from "../components/StockChart";
@@ -19,6 +19,8 @@ interface DropdownItem {
   label: string;
   value: string;
 }
+
+// const router = useRouter();
 
 export default function Home() {
   const [companies, setCompanies] = useState<string>("");
@@ -85,12 +87,12 @@ export default function Home() {
       setError("Please enter a company ticker");
       return;
     }
-
+  
     setLoading(true);
     setError(null);
+    
     try {
       const API_URL = "https://moc.hackclub.app/recommend";
-
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -101,21 +103,20 @@ export default function Home() {
           investing_horizon: investingHorizon,
         }),
       });
-
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+      console.log(response);
       const data = await response.json();
+      console.log(data);
+      
+      // Simplified navigation
       router.push({
         pathname: "/recommendations",
-        params: {
-          data: JSON.stringify({
-            recommendations: data.recommendations,
-            metadata: data.metadata,
-          }),
-        },
+        params: { data: JSON.stringify(data) }
       });
+  
     } catch (error) {
       console.error("Error:", error);
       setError(error instanceof Error ? error.message : "An error occurred");
