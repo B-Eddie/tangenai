@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { router, useRouter } from "expo-router";
-import { theme } from "../components/theme";
+import { theme } from "../../components/theme";
 import { Dropdown } from "react-native-element-dropdown";
-import StockChart from "../components/StockChart";
+import StockChart from "../../components/StockChart";
 import axios from "axios";
+import { APIContext } from '../_layout';
 
 interface StockData {
   date: string;
@@ -23,6 +24,7 @@ interface DropdownItem {
 // const router = useRouter();
 
 export default function Home() {
+  const API_URL = useContext(APIContext);
   const [companies, setCompanies] = useState<string>("");
   const [investingHorizon, setInvestingHorizon] =
     useState<string>("short-term");
@@ -30,7 +32,7 @@ export default function Home() {
   const [stockData, setStockData] = useState<StockData[]>([]);
   const [chartType, setChartType] = useState<"line" | "candlestick">("line");
   const [error, setError] = useState<string | null>(null);
-
+  
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
       if (companies.trim()) {
@@ -87,12 +89,11 @@ export default function Home() {
       setError("Please enter a company ticker");
       return;
     }
-  
+
     setLoading(true);
     setError(null);
-    
     try {
-      const API_URL = "https://moc.hackclub.app/recommend";
+      // const API_URL = "https://moc.hackclub.app/recommend";
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -103,20 +104,18 @@ export default function Home() {
           investing_horizon: investingHorizon,
         }),
       });
-  
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       console.log(response);
       const data = await response.json();
       console.log(data);
-      
-      // Simplified navigation
+
       router.push({
-        pathname: "/recommendations",
-        params: { data: JSON.stringify(data) }
+        pathname: "../recommendations",
+        params: { data: JSON.stringify(data) },
       });
-  
     } catch (error) {
       console.error("Error:", error);
       setError(error instanceof Error ? error.message : "An error occurred");

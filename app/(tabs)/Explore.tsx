@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import axios from "axios";
-import { theme } from "../components/theme";
-import StockChart from "../components/StockChart";
+import { theme } from "../../components/theme";
+import StockChart from "../../components/StockChart";
 import Slider from "@react-native-community/slider";
 import { Dropdown } from "react-native-element-dropdown";
+import { APIContext } from '../_layout';
 
 interface StockData {
   date: string;
@@ -24,6 +25,7 @@ interface StockInfo {
 }
 
 export default function ExploreStocks() {
+  const API_URL = useContext(APIContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [stockData, setStockData] = useState<StockData[]>([]);
@@ -104,22 +106,22 @@ export default function ExploreStocks() {
     try {
       // First, fetch a list of stocks from Yahoo Finance API
       const stockListResponse = await axios.get(
-        "https://yahoo-finance15.p.rapidapi.com/api/yahoo/market/get-quotes", 
+        "https://yahoo-finance15.p.rapidapi.com/api/yahoo/market/get-quotes",
         {
           params: {
             region: "US",
             lang: "en",
-            symbols: "AAPL,MSFT,GOOGL,AMZN,FB,TSLA,JPM,JNJ,WMT,PG" // Add more symbols as needed
+            symbols: "AAPL,MSFT,GOOGL,AMZN,FB,TSLA,JPM,JNJ,WMT,PG", // Add more symbols as needed
           },
           headers: {
             "X-RapidAPI-Key": process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
-            "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com"
-          }
+            "X-RapidAPI-Host": "yahoo-finance15.p.rapidapi.com",
+          },
         }
       );
 
       const stocks = stockListResponse.data.body;
-      const filteredStocks = stocks.filter(stock => {
+      const filteredStocks = stocks.filter((stock) => {
         const price = stock.regularMarketPrice;
         return (
           (!minCost || price >= parseFloat(minCost)) &&
@@ -131,16 +133,17 @@ export default function ExploreStocks() {
       // Get scores from Tangen API
       const tangenResponse = await fetch(
         // "https://tangen-api.onrender.com/recommend",
-        "https://moc.hackclub.app/recommend",
+        // "https://moc.hackclub.app/recommend",
+        API_URL,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            companies: filteredStocks.map(stock => stock.symbol),
+            companies: filteredStocks.map((stock) => stock.symbol),
             risk_level: riskLevel,
-            min_confidence: confidence
+            min_confidence: confidence,
           }),
         }
       );
@@ -150,18 +153,21 @@ export default function ExploreStocks() {
       }
 
       const scoreData = await tangenResponse.json();
-      
-      // Update the UI with matched stocks and their scores
-      setStockData(scoreData.recommendations.map(rec => ({
-        symbol: rec.symbol,
-        score: rec.score,
-        confidence: rec.confidence,
-        risk: rec.risk
-      })));
 
+      // Update the UI with matched stocks and their scores
+      setStockData(
+        scoreData.recommendations.map((rec) => ({
+          symbol: rec.symbol,
+          score: rec.score,
+          confidence: rec.confidence,
+          risk: rec.risk,
+        }))
+      );
     } catch (error) {
       console.error("Error:", error);
-      setError(error instanceof Error ? error.message : "Failed to fetch stocks");
+      setError(
+        error instanceof Error ? error.message : "Failed to fetch stocks"
+      );
     } finally {
       setLoading(false);
     }

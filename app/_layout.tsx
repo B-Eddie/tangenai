@@ -1,56 +1,28 @@
 import { Stack } from "expo-router";
 import { PaperProvider } from "react-native-paper";
-import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { createContext } from 'react';
 import { theme } from "../components/theme";
+
+export const API_URL = "https://moc.hackclub.app/recommend";
+// export const API_URL = "http://127.0.0.1:32771/recommend";
+// export const API_URL = "tangen-api.onrender.com/recommend";
+export const APIContext = createContext(API_URL);
 
 export default function Layout() {
   return (
     <PaperProvider theme={theme}>
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: theme.colors.primary,
-          tabBarInactiveTintColor: "#999",
-          tabBarStyle: {
-            backgroundColor: "#fff",
-            borderTopWidth: 1,
-            borderTopColor: "#eee",
-            paddingBottom: 5,
-            paddingTop: 5,
-          },
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            headerShown: false,
-            tabBarLabel: "Search",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="search-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="Explore"
-          options={{
-            headerShown: false,
-            tabBarLabel: "Explore",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="compass-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="Watchlist"
-          options={{
-            headerShown: false,
-            tabBarLabel: "Watchlist",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="bookmark-outline" size={size} color={color} />
-            ),
-          }}
-        />
-      </Tabs>
+      <APIContext.Provider value={API_URL}>
+        <Stack>
+          <Stack.Screen 
+            name="(tabs)" 
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="recommendations" 
+            options={{ headerShown: false }}
+          />
+        </Stack>
+      </APIContext.Provider>
     </PaperProvider>
   );
 }

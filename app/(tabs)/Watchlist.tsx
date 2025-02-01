@@ -13,8 +13,8 @@ import {
   getHotStocks,
   getStockData,
   searchStocks,
-} from "../components/stockService";
-import { theme } from "../components/theme";
+} from "../../components/stockService";
+import { theme } from "../../components/theme";
 import debounce from "lodash/debounce";
 
 interface Stock {
@@ -155,7 +155,9 @@ export default function Watchlist() {
   };
 
   const generateUniqueId = (prefix: string, symbol: string, index: number) => {
-    return `${prefix}-${symbol}-${index}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    return `${prefix}-${symbol}-${index}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 11)}`;
   };
 
   return (
