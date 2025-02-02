@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView, Dimensions } from "react-native";
 import { Text, Card, Button, ProgressBar } from "react-native-paper";
 import { useLocalSearchParams, router } from "expo-router";
 import { theme } from "../components/theme";
@@ -66,7 +66,6 @@ export default function Recommendations() {
       console.error("Data parsing error:", error);
     }
   }, [data]);
-  
 
   const getGrowthColor = (growth?: number) => {
     const value = growth ?? 0;
@@ -183,11 +182,13 @@ export default function Recommendations() {
                     label: "Recent Performance",
                     value: components.recent_performance,
                     color: theme.colors.primary,
+                    ideal: "high", // Higher is better
                   },
                   {
                     label: "Risk Factor",
                     value: components.risk_factor,
                     color: "#FF9800",
+                    ideal: "low", // Lower is better
                   },
                 ].map((metric, idx) => (
                   <View key={idx} style={styles.progressContainer}>
@@ -202,6 +203,11 @@ export default function Recommendations() {
                       color={metric.color}
                       style={styles.progressBar}
                     />
+                    <Text style={styles.idealLabel}>
+                      {metric.ideal === "high"
+                        ? "Higher is better"
+                        : "Lower is better"}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -273,7 +279,7 @@ export default function Recommendations() {
   );
 }
 
-// Keep your existing styles
+const { width } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
@@ -385,6 +391,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
+  textContainer: {
+    flexDirection: "row",
+    marginBottom: 7,
+    marginTop: 10,
+  },
   progressContainer: {
     flexDirection: "column",
     alignItems: "flex-start",
@@ -392,18 +403,11 @@ const styles = StyleSheet.create({
     overflow: "visible",
     marginBottom: 30,
   },
-  textContainer: {
-    flexDirection: "row",
-    marginBottom: 7,
-    marginTop: 10,
-  },
   progressBar: {
-    flex: 1,
-    height: 8,
+    height: 25,
+    width: width < 600 ? 320 : 1200,
+    alignSelf: "stretch",
     borderRadius: 4,
-    width: "100%",
-    maxWidth: "100%",
-    maxHeight: "70%",
   },
   sentimentValue: {
     width: 50,
@@ -440,5 +444,12 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontSize: 18,
     fontWeight: "bold",
+  },
+  idealLabel: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 4,
+    fontStyle: "italic",
+    textAlign: "right",
   },
 });

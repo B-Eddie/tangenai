@@ -24,8 +24,7 @@ interface DropdownItem {
 }
 
 // const router = useRouter();
-
-export default function Home() {
+function Home() {
   const API_URL = useContext(APIContext);
   const [companies, setCompanies] = useState<string>("");
   const [investingHorizon, setInvestingHorizon] =
@@ -96,15 +95,11 @@ export default function Home() {
     setError(null);
     
     try {
-      const recommendations = await getStockRecommendation(
-        companies.split(",").map(c => c.trim().toUpperCase()),
-        investingHorizon
-      );
       const recommendationsData = await getStockRecommendation(
         companies.split(",").map(c => c.trim().toUpperCase()),
         investingHorizon
       );
-      
+
       router.push({
         pathname: "../recommendations",
         params: { data: JSON.stringify(recommendationsData) },
@@ -262,3 +257,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+
+export default Home;
