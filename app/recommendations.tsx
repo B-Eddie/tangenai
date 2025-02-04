@@ -56,7 +56,7 @@ const safePercentage = (value?: number) => `${safeParseFloat(value)}%`;
 export default function Recommendations() {
   const { data } = useLocalSearchParams();
   const [parsedData, setParsedData] = React.useState<ApiResponse | null>(null);
-
+  console.log(data);
   React.useEffect(() => {
     try {
       const rawData = Array.isArray(data) ? data[0] : data;

@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Text, Card, Button, ProgressBar } from "react-native-paper";
 import { useLocalSearchParams, router } from "expo-router";
 import { theme } from "../components/theme";
+import { getStockRecommendation } from './services/stockService';
 
 interface Recommendation {
   symbol: string;
@@ -29,21 +30,45 @@ const getSentimentEmoji = (score: number) => {
 
 const ExploreRecommendations = () => {
   const { data } = useLocalSearchParams();
-  const [sortBy, setSortBy] = useState<"symbol" | "score" | "sentiment">("score");
-  
+  const [sortBy, setSortBy] = useState<"symbol" | "score" | "sentiment">(
+    "score"
+  );
+
   const rawData = Array.isArray(data) ? data[0] : data;
-  const recommendations: Recommendation[] = rawData ? JSON.parse(rawData).recommendations : [];
+  const recommendations: Recommendation[] = rawData
+    ? JSON.parse(rawData).recommendations
+    : [];
 
   const sortedRecommendations = [...recommendations].sort((a, b) => {
     if (sortBy === "score") return b.score - a.score;
-    if (sortBy === "sentiment") return (b.details?.sentiment?.score || 0) - (a.details?.sentiment?.score || 0);
+    if (sortBy === "sentiment")
+      return (
+        (b.details?.sentiment?.score || 0) - (a.details?.sentiment?.score || 0)
+      );
     return a.symbol.localeCompare(b.symbol);
   });
 
-  const handleStockPress = (stock: Recommendation) => {
+  const handleStockPress = async (stock: Recommendation) => {
     router.push({
-      pathname: "/recommendation-detail",
-      params: { data: JSON.stringify(stock) }
+      pathname: "/recommendations",
+      params: {
+      data: JSON.stringify({
+        status: "success",
+        recommendations: [{
+        ...stock,
+        components: {
+          recent_performance: stock.score,
+          historical_growth: stock.details?.stock_data?.historical_growth || 0,
+          sentiment_score: (stock.details?.sentiment?.score || 0) * 100,
+          risk_factor: stock.details?.stock_data?.volatility || 0
+        }
+        }],
+        metadata: {
+        timestamp: new Date().toISOString(),
+        horizon: "short-term"
+        }
+      })
+      }
     });
   };
 
@@ -99,8 +124,8 @@ const ExploreRecommendations = () => {
         const color = getSentimentColor(sentimentScore);
 
         return (
-          <TouchableOpacity 
-            key={index} 
+          <TouchableOpacity
+            key={index}
             onPress={() => handleStockPress(item)}
             activeOpacity={0.9}
           >
