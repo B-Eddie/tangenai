@@ -187,20 +187,26 @@ export default function ExploreStocks() {
       }
     
       // 7. Safer processing with defaults
-      const processedRecommendations = recommendationResponse.recommendations
-  .filter(rec => {
-    try {
-      // Ensure numeric conversion
-      const confidenceValue = Number(confidence) || 0;
-      const sentimentScore = Number(rec.details?.sentiment?.score) || 0;
-      const dataPoints = Number(rec.details?.stock_data?.data_points) || 0;
+      const recommendations = Array.isArray(recommendationResponse.recommendations) 
+        ? recommendationResponse.recommendations 
+        : [];
       
-      return (sentimentScore * 100 >= confidenceValue) && dataPoints >= 5;
-    } catch (e) {
-      console.error("Filter error:", e);
-      return false;
-    }
-  })
+      const processedRecommendations = recommendations
+        .filter(rec => {
+          try {
+            const sentimentScore = rec.details?.sentiment?.score || 0;
+            const dataPoints = rec.details?.stock_data?.data_points || 0;
+            return (sentimentScore * 100 >= (confidence || 0)) && dataPoints >= 5;
+          } catch (e) {
+            return false;
+          }
+        })
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, maxRec);
+    
+      if (processedRecommendations.length === 0) {
+        throw new Error(`No recommendations meet your confidence level (${confidence}%). Try lowering the confidence threshold.`);
+      }
     
       // 8. Safer navigation params
       router.push({
