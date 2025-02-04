@@ -21,6 +21,10 @@ export default function Layout() {
             name="recommendations" 
             options={{ headerShown: false }}
           />
+          <Stack.Screen 
+            name="explore_recommendations" 
+            options={{ headerShown: false }}
+          />
         </Stack>
       </APIContext.Provider>
     </PaperProvider>

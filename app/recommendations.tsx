@@ -47,6 +47,8 @@ interface ApiResponse {
   };
 }
 
+const { width } = Dimensions.get("window");
+
 // Safe parsing helpers
 const safeParseFloat = (value?: number) => value?.toFixed(1) ?? "0.0";
 const safePercentage = (value?: number) => `${safeParseFloat(value)}%`;
@@ -188,10 +190,10 @@ export default function Recommendations() {
                     label: "Risk Factor",
                     value: components.risk_factor,
                     color: "#FF9800",
-                    ideal: "low", // Lower is better
+                    ideal: "low",
                   },
                 ].map((metric, idx) => (
-                  <View key={idx} style={styles.progressContainer}>
+                  <View key={idx} style={[styles.progressContainer, { marginTop: width < 600 ? 0 : 10, }]}>
                     <View style={styles.textContainer}>
                       <Text style={styles.componentLabel}>{metric.label}</Text>
                       <Text style={styles.componentValue}>
@@ -278,8 +280,6 @@ export default function Recommendations() {
     </ScrollView>
   );
 }
-
-const { width } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   idealLabel: {
     fontSize: 12,
     color: "#888",
-    marginTop: 4,
+    marginTop: width < 600 ? 4 : -20,
     fontStyle: "italic",
     textAlign: "right",
   },

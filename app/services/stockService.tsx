@@ -6,7 +6,8 @@ import { Platform } from "react-native";
 // Market data endpoints
 const FINNHUB_API_URL = "https://finnhub.io/api/v1";
 const YAHOO_FINANCE_API = "https://query1.finance.yahoo.com/v8/finance/chart";
-const CORS_PROXY = "https://api.allorigins.win/get?url=";
+// const CORS_PROXY = "https://api.allorigins.win/get?url=";
+const CORS_PROXY = "";
 const CACHE_TTL = 5 * 60 * 1000;
 
 // Sentiment analysis word lists
@@ -154,14 +155,14 @@ const fetchCompanyNews = async (symbol: string) => {
   try {
     const today = new Date();
     const fromDate = new Date(today.setDate(today.getDate() - 30));
-    const { data } = await axios.get(`${FINNHUB_API_URL}/company-news`, {
-      params: {
-        symbol,
-        from: fromDate.toISOString().split("T")[0],
-        to: new Date().toISOString().split("T")[0],
-        token: Constants.expoConfig.extra.FINNHUB_API_KEY,
-      },
-    });
+    const apiKey = Constants.expoConfig?.extra?.FINNHUB_API_KEY;
+    if (!apiKey) {
+      throw new Error('FINNHUB_API_KEY is not configured');
+    }
+    
+    const url = encodeURIComponent(`${FINNHUB_API_URL}/company-news?symbol=${symbol}&from=${fromDate.toISOString().split("T")[0]}&to=${new Date().toISOString().split("T")[0]}&token=${apiKey}`);
+    const response = await axios.get(`${CORS_PROXY}${url}`);
+    const data = JSON.parse(response.data.contents);
     const validNews = data.filter((article: any) => article.summary);
     await storeCache(cacheKey, validNews);
     return validNews;
@@ -243,6 +244,7 @@ export const getStockRecommendation = async (companies: string[], horizon = "sho
               stock_data: stockData,
               sentiment,
               components,
+              company
             },
           };
         } catch (error) {
