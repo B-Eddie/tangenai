@@ -125,8 +125,8 @@ export default function ExploreStocks() {
       // 1. Get form inputs with validation
       const horizon = investingHorizon || 'long-term'; // Add default
       const maxRec = parseInt(maxRecommendations) || 10; // Ensure number
-      const maxResults = maxRec + 20;
-    
+      const maxResults = maxRec + 25;
+
       // 2. Validate API key
       const apiKey = Constants.expoConfig?.extra?.FMP_API;
       if (!apiKey) {
