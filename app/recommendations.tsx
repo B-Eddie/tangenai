@@ -257,9 +257,9 @@ export default function Recommendations() {
                 ))}
               </View>
 
-              <Text style={styles.dataPoints}>
+              {/* <Text style={styles.dataPoints}>
                 Based on {stockData.data_points ?? 0} data points
-              </Text>
+              </Text> */}
 
               <Text style={styles.overallScore}>
                 Overall Score: {safeParseFloat(rec.score)}
