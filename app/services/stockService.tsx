@@ -2,6 +2,8 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { parse } from 'node-html-parser';
+
 
 // Market data endpoints
 const FINNHUB_API_URL = "https://finnhub.io/api/v1";
@@ -114,26 +116,12 @@ const getCache = async (key: string) => {
   }
 };
 
-const BLUESKY_API_URL = "https://bsky.social/xrpc";
-const BLUESKY_USER = Constants.expoConfig?.extra?.BLUESKY_USER;
-const BLUESKY_PASSWORD = Constants.expoConfig?.extra?.BLUESKY_PASSWORD;
+const INVESTOPEDIA_SEARCH_URL = CORS_PROXY + "https://www.investopedia.com/search?q=";
 
-const createBlueskySession = async () => {
-  try {
-    const response = await axios.post(`${BLUESKY_API_URL}/com.atproto.server.createSession`, {
-      identifier: BLUESKY_USER,
-      password: BLUESKY_PASSWORD,
-    });
-    return response.data.accessJwt;
-  } catch (error) {
-    console.error("Bluesky authentication failed:", error);
-    throw new Error("Failed to authenticate with Bluesky");
-  }
-};
-
-const fetchCompanyTweets = async (symbol) => {
-  console.log("Fetching Bluesky posts for:", symbol);
-  const cacheKey = getCacheKey("bluesky_posts", symbol);
+const fetchCompanyTweets = async (query) => {
+  console.log("Fetching Investopedia articles for:", query);
+  const cacheKey = getCacheKey("investopedia_articles", query);
+  
   try {
     const cached = await getCache(cacheKey);
     if (cached) return cached;
@@ -142,21 +130,67 @@ const fetchCompanyTweets = async (symbol) => {
   }
 
   try {
-    const token = await createBlueskySession();
-    const response = await axios.get(`${BLUESKY_API_URL}/app.bsky.feed.searchPosts`, {
-      headers: { Authorization: `Bearer ${token}` },
-      params: { q: `$${symbol}`, limit: 20 },
+    // Fetch the search results page using the CORS proxy
+    const response = await axios.get(INVESTOPEDIA_SEARCH_URL + query, {
+      params: { q: query }
     });
-    
-    const posts = response.data.posts || [];
-    await storeCache(cacheKey, posts);
-    console.log("Fetched Bluesky posts:", posts);
-    return posts;
+
+    // If using a proxy like AllOrigins, extract the actual HTML from the "contents" property.
+    let html = response.data;
+    if (html && html.contents) {
+      html = html.contents;
+    }
+    // console.log("HTML snippet:", html);
+
+    // Parse the HTML with node-html-parser
+    const root = parse(html);
+    const articles = [];
+
+    // Use a class-based selector to grab article cards
+    const allArticleElements = root.querySelectorAll('a[id^="mntl-card-list-card--extendable"]');
+    const articleElements = Array.from(allArticleElements).slice(0, 1);
+
+    console.log("Found article elements:", articleElements.length);
+
+    for (const element of articleElements) {
+      // Find the title within the anchor element
+      const titleElement = element.querySelector(".card__title-text");
+      const title = titleElement ? titleElement.text.trim() : "";
+      const url = element.getAttribute("href");
+      let articleText = '';
+
+      if (url) {
+        try {
+          const fullUrl = url.startsWith("http") ? url : `https://www.investopedia.com${url}`;
+          const response = await axios.get(CORS_PROXY + encodeURIComponent(fullUrl));
+          const articleHtml = response.data.contents;
+          const articleRoot = parse(articleHtml);
+          const articleContent = articleRoot.querySelector('.article-content');
+          articleText = articleContent ? articleContent.text.trim() : '';
+        } catch (error) {
+          console.error(`Error fetching article content for ${url}:`, error);
+        }
+      }
+
+      if (title && url) {
+        articles.push({
+          title,
+          url: url.startsWith("http") ? url : `https://www.investopedia.com${url}`,
+          text: articleText,
+        });
+      }
+    }
+
+    await storeCache(cacheKey, articles);
+    // console.log("Fetched Investopedia articles:", articles);
+    return articles;
   } catch (error) {
-    console.error(`Error fetching Bluesky posts for ${symbol}:`, error);
+    console.error(`Error fetching Investopedia articles for ${query}:`, error);
     return [];
   }
 };
+
+
 
 // Local sentiment analysis (simple word-based)
 const analyzeSentiment = (text: string) => {
@@ -288,9 +322,17 @@ const fetchCompanyNews = async (symbol: string) => {
       fromDate.toISOString().split("T")[0]
     }&to=${new Date().toISOString().split("T")[0]}&token=${apiKey}`;
 
-    const response = await axios.get(
+    let response = await axios.get(
       CORS_PROXY ? `${CORS_PROXY}${encodeURIComponent(targetUrl)}` : targetUrl
     );
+
+    if (response.status === 500) {
+      // Retry the request once
+      const retryResponse = await axios.get(
+      CORS_PROXY ? `${CORS_PROXY}${encodeURIComponent(targetUrl)}` : targetUrl
+      );
+      response = retryResponse; // Update the response with retry result
+    }
 
     // Handle proxy response format
     const data = CORS_PROXY
@@ -335,7 +377,7 @@ export const getStockRecommendation = async (
             fetchCompanyTweets(company),
           ]);
           
-          console.log("Tweets:", tweets);
+          // console.log("Tweets:", tweets);
 
           if (!stockData || (!news.length && !tweets.length)) return null;
 
@@ -346,7 +388,7 @@ export const getStockRecommendation = async (
             const tweetTexts = tweets
             .map((tweets) => tweets.record?.text)
             .filter(Boolean);
-          console.log("Tweet texts:", tweetTexts);
+          // console.log("Tweet texts:", tweetTexts);
           const allTexts = [...articles, ...tweetTexts]; // Combine news and tweets
 
           if (!stockData || !news.length) return null;
