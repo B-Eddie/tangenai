@@ -62,13 +62,11 @@ const validateNewsData = (data: any): data is NewsArticle[] => {
 // 1. Sanitize cache keys so they only contain safe characters
 const sanitizeKey = (key: string) => key.replace(/[^a-zA-Z0-9_]/g, "_");
 
-// A simple djb2 hash function to generate a short key from a string.
 // A simple djb2 hash function that produces a fixed-length numeric string.
 const simpleHash = (str: string): string => {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
     hash = (hash << 5) + hash + str.charCodeAt(i);
-    // Convert to 32bit integer
     hash = hash & hash;
   }
   return Math.abs(hash).toString(); // Ensure it's positive and return as string.
@@ -86,7 +84,6 @@ const getCacheKey = (type: string, identifier: string): string => {
 };
 
 // ---
-// Cache helpers
 const storeCache = async (key: string, data: any) => {
   try {
     await AsyncStorage.setItem(
@@ -117,7 +114,50 @@ const getCache = async (key: string) => {
   }
 };
 
-// ---
+const BLUESKY_API_URL = "https://bsky.social/xrpc";
+const BLUESKY_USER = Constants.expoConfig?.extra?.BLUESKY_USER;
+const BLUESKY_PASSWORD = Constants.expoConfig?.extra?.BLUESKY_PASSWORD;
+
+const createBlueskySession = async () => {
+  try {
+    const response = await axios.post(`${BLUESKY_API_URL}/com.atproto.server.createSession`, {
+      identifier: BLUESKY_USER,
+      password: BLUESKY_PASSWORD,
+    });
+    return response.data.accessJwt;
+  } catch (error) {
+    console.error("Bluesky authentication failed:", error);
+    throw new Error("Failed to authenticate with Bluesky");
+  }
+};
+
+const fetchCompanyTweets = async (symbol) => {
+  console.log("Fetching Bluesky posts for:", symbol);
+  const cacheKey = getCacheKey("bluesky_posts", symbol);
+  try {
+    const cached = await getCache(cacheKey);
+    if (cached) return cached;
+  } catch (error) {
+    console.error("Cache retrieval error:", error);
+  }
+
+  try {
+    const token = await createBlueskySession();
+    const response = await axios.get(`${BLUESKY_API_URL}/app.bsky.feed.searchPosts`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { q: `$${symbol}`, limit: 20 },
+    });
+    
+    const posts = response.data.posts || [];
+    await storeCache(cacheKey, posts);
+    console.log("Fetched Bluesky posts:", posts);
+    return posts;
+  } catch (error) {
+    console.error(`Error fetching Bluesky posts for ${symbol}:`, error);
+    return [];
+  }
+};
+
 // Local sentiment analysis (simple word-based)
 const analyzeSentiment = (text: string) => {
   const words = text.toLowerCase().split(/\W+/);
@@ -276,7 +316,6 @@ const fetchCompanyNews = async (symbol: string) => {
   }
 };
 
-// ---
 // Main recommendation function
 export const getStockRecommendation = async (
   companies: string[],
@@ -290,18 +329,29 @@ export const getStockRecommendation = async (
     const recommendations = await Promise.all(
       companies.map(async (company) => {
         try {
-          const [stockData, news] = await Promise.all([
+          const [stockData, news, tweets] = await Promise.all([
             fetchStockData(company, horizon),
             fetchCompanyNews(company),
+            fetchCompanyTweets(company),
           ]);
+          
+          console.log("Tweets:", tweets);
 
-          if (!stockData || !news.length) return null;
+          if (!stockData || (!news.length && !tweets.length)) return null;
 
           const articles = news
             .map((article: any) => article.summary?.substring(0, 100) || "")
             .filter((text: string) => text.length > 0);
 
-          const sentiment = await analyzeArticles(articles);
+            const tweetTexts = tweets
+            .map((tweets) => tweets.record?.text)
+            .filter(Boolean);
+          console.log("Tweet texts:", tweetTexts);
+          const allTexts = [...articles, ...tweetTexts]; // Combine news and tweets
+
+          if (!stockData || !news.length) return null;
+
+          const sentiment = await analyzeArticles(allTexts);
 
           const components = {
             recent_performance: Math.min(
@@ -349,6 +399,7 @@ export const getStockRecommendation = async (
               sentiment,
               components,
               company,
+              tweets
             },
           };
         } catch (error) {
