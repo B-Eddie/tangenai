@@ -10,8 +10,6 @@ export default {
         HF_API_KEY3: process.env.HF_API_KEY3,
         NEXT_PUBLIC_RAPIDAPI_KEY: process.env.NEXT_PUBLIC_RAPIDAPI_KEY,
         FMP_API: process.env.FMP_API,
-        TWITTER_BEARER_TOKEN: process.env.XAPI,
-        XBEARER: process.env.XBEARER,
         BLUESKY_PASSWORD: process.env.BLUESKY_PASSWORD,
         BLUESKY_USER: process.env.BLUESKY_USER,
       },
