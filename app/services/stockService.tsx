@@ -2,8 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
-import { parse } from 'node-html-parser';
-
+import { parse } from "node-html-parser";
 
 // Market data endpoints
 const FINNHUB_API_URL = "https://finnhub.io/api/v1";
@@ -116,12 +115,13 @@ const getCache = async (key: string) => {
   }
 };
 
-const INVESTOPEDIA_SEARCH_URL = CORS_PROXY + "https://www.investopedia.com/search?q=";
+const INVESTOPEDIA_SEARCH_URL =
+  CORS_PROXY + "https://www.investopedia.com/search?q=";
 
 const fetchCompanyTweets = async (query) => {
   console.log("Fetching Investopedia articles for:", query);
   const cacheKey = getCacheKey("investopedia_articles", query);
-  
+
   try {
     const cached = await getCache(cacheKey);
     if (cached) return cached;
@@ -132,7 +132,7 @@ const fetchCompanyTweets = async (query) => {
   try {
     // Fetch the search results page using the CORS proxy
     const response = await axios.get(INVESTOPEDIA_SEARCH_URL + query, {
-      params: { q: query }
+      params: { q: query },
     });
 
     // If using a proxy like AllOrigins, extract the actual HTML from the "contents" property.
@@ -147,7 +147,9 @@ const fetchCompanyTweets = async (query) => {
     const articles = [];
 
     // Use a class-based selector to grab article cards
-    const allArticleElements = root.querySelectorAll('a[id^="mntl-card-list-card--extendable"]');
+    const allArticleElements = root.querySelectorAll(
+      'a[id^="mntl-card-list-card--extendable"]'
+    );
     const articleElements = Array.from(allArticleElements).slice(0, 1);
 
     console.log("Found article elements:", articleElements.length);
@@ -157,16 +159,20 @@ const fetchCompanyTweets = async (query) => {
       const titleElement = element.querySelector(".card__title-text");
       const title = titleElement ? titleElement.text.trim() : "";
       const url = element.getAttribute("href");
-      let articleText = '';
+      let articleText = "";
 
       if (url) {
         try {
-          const fullUrl = url.startsWith("http") ? url : `https://www.investopedia.com${url}`;
-          const response = await axios.get(CORS_PROXY + encodeURIComponent(fullUrl));
+          const fullUrl = url.startsWith("http")
+            ? url
+            : `https://www.investopedia.com${url}`;
+          const response = await axios.get(
+            CORS_PROXY + encodeURIComponent(fullUrl)
+          );
           const articleHtml = response.data.contents;
           const articleRoot = parse(articleHtml);
-          const articleContent = articleRoot.querySelector('.article-content');
-          articleText = articleContent ? articleContent.text.trim() : '';
+          const articleContent = articleRoot.querySelector(".article-content");
+          articleText = articleContent ? articleContent.text.trim() : "";
         } catch (error) {
           console.error(`Error fetching article content for ${url}:`, error);
         }
@@ -175,7 +181,9 @@ const fetchCompanyTweets = async (query) => {
       if (title && url) {
         articles.push({
           title,
-          url: url.startsWith("http") ? url : `https://www.investopedia.com${url}`,
+          url: url.startsWith("http")
+            ? url
+            : `https://www.investopedia.com${url}`,
           text: articleText,
         });
       }
@@ -189,8 +197,6 @@ const fetchCompanyTweets = async (query) => {
     return [];
   }
 };
-
-
 
 // Local sentiment analysis (simple word-based)
 const analyzeSentiment = (text: string) => {
@@ -329,7 +335,7 @@ const fetchCompanyNews = async (symbol: string) => {
     if (response.status === 500) {
       // Retry the request once
       const retryResponse = await axios.get(
-      CORS_PROXY ? `${CORS_PROXY}${encodeURIComponent(targetUrl)}` : targetUrl
+        CORS_PROXY ? `${CORS_PROXY}${encodeURIComponent(targetUrl)}` : targetUrl
       );
       response = retryResponse; // Update the response with retry result
     }
@@ -358,6 +364,86 @@ const fetchCompanyNews = async (symbol: string) => {
   }
 };
 
+// Add RapidAPI configuration
+const RAPIDAPI_KEY = "9aa4bf8e6cmsha7bc3e1aab08dfdp169b22jsn2ad80087c37d"; // Should be stored in environment variables
+const RAPIDAPI_HOST = "wall-street-journal.p.rapidapi.com";
+const WSJ_API_URL =
+  "https://wall-street-journal.p.rapidapi.com/api/v1/searchArticleByKeyword";
+
+// Update the WSJ API response interface
+interface WSJApiResponse {
+  status: boolean;
+  timestamp: number;
+  data: WSJArticle[];
+}
+
+interface WSJArticle {
+  articleId: string;
+  headline: string;
+  summary: string;
+  url: string;
+  timestamp: string;
+  authors?: string[];
+  created?: string;
+}
+
+// Replace fetchCompanyArticles to handle the correct response format
+const fetchCompanyArticles = async (query: string): Promise<any[]> => {
+  console.log("Fetching WSJ articles for:", query);
+  const cacheKey = getCacheKey("wsj_articles", query);
+
+  try {
+    const cached = await getCache(cacheKey);
+    if (cached) return cached;
+  } catch (error) {
+    console.error("Cache retrieval error:", error);
+  }
+
+  try {
+    // Fetch articles from WSJ API via RapidAPI
+    const response = await axios.get(WSJ_API_URL, {
+      params: {
+        keyword: query,
+      },
+      headers: {
+        "x-rapidapi-host": RAPIDAPI_HOST,
+        "x-rapidapi-key": RAPIDAPI_KEY,
+      },
+    });
+
+    // Check for the correct response structure
+    if (
+      !response.data ||
+      !response.data.status ||
+      !Array.isArray(response.data.data)
+    ) {
+      console.warn("Invalid WSJ API response format:", response.data);
+      return [];
+    }
+
+    const articles = response.data.data
+      .map((article: WSJArticle) => ({
+        title: article.headline || "",
+        url: article.url || "",
+        text: article.summary || "",
+        datetime:
+          article.created || article.timestamp || new Date().toISOString(),
+        authors: article.authors || [],
+      }))
+      .filter((article: any) => article.title && article.text);
+
+    // Limit to 5 articles to avoid too many requests
+    const limitedArticles = articles.slice(0, 5);
+
+    await storeCache(cacheKey, limitedArticles);
+    console.log(`Fetched ${limitedArticles.length} WSJ articles for ${query}`);
+    return limitedArticles;
+  } catch (error) {
+    console.error(`Error fetching WSJ articles for ${query}:`, error);
+    return [];
+  }
+};
+
 // Main recommendation function
 export const getStockRecommendation = async (
   companies: string[],
@@ -371,30 +457,29 @@ export const getStockRecommendation = async (
     const recommendations = await Promise.all(
       companies.map(async (company) => {
         try {
-          const [stockData, news, tweets] = await Promise.all([
+          const [stockData, news, articles] = await Promise.all([
             fetchStockData(company, horizon),
             fetchCompanyNews(company),
-            fetchCompanyTweets(company),
+            fetchCompanyArticles(company), // Use the new function here
           ]);
-          
-          // console.log("Tweets:", tweets);
 
-          if (!stockData || (!news.length && !tweets.length)) return null;
+          if (!stockData || (!news.length && !articles.length)) return null;
 
-          const articles = news
+          const newsTexts = news
             .map((article: any) => article.summary?.substring(0, 100) || "")
             .filter((text: string) => text.length > 0);
 
-            const tweetTexts = tweets
-            .map((tweets) => tweets.record?.text)
-            .filter(Boolean);
-          // console.log("Tweet texts:", tweetTexts);
-          const allTexts = [...articles, ...tweetTexts]; // Combine news and tweets
+          const articleTexts = articles
+            .map((article: any) => article.text || "")
+            .filter((text: string) => text.length > 0);
 
-          if (!stockData || !news.length) return null;
+          const allTexts = [...newsTexts, ...articleTexts]; // Combine news and articles
+
+          if (allTexts.length === 0) return null;
 
           const sentiment = await analyzeArticles(allTexts);
 
+          // Rest of the function remains the same
           const components = {
             recent_performance: Math.min(
               Math.max(((stockData.recent_growth + 20) / 40) * 100, 0),
@@ -441,7 +526,7 @@ export const getStockRecommendation = async (
               sentiment,
               components,
               company,
-              tweets
+              articles, // Include articles in the details
             },
           };
         } catch (error) {
