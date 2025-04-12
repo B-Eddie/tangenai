@@ -6,7 +6,7 @@ export const theme = {
     ...DefaultTheme.colors,
     primary: "#FF4500",
     brownheader: "#885C0B",
-    background: "#FFFFFF",
+    background: "#fcfaf8",
     border: "#D9B458",
   },
 };

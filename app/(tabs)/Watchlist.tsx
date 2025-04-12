@@ -16,6 +16,7 @@ import {
 } from "../../components/stockService";
 import { theme } from "../../components/theme";
 import debounce from "lodash/debounce";
+import { LinearGradient } from "expo-linear-gradient";
 
 interface Stock {
   symbol: string;
@@ -166,66 +167,138 @@ export default function Watchlist() {
       contentContainerStyle={styles.scrollContent}
     >
       <Text style={styles.headerText}>Watchlist</Text>
+      <Text style={styles.smallHeaderText}>
+        Track your favorite stocks and discover new investment opportunities.
+      </Text>
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
-      <View style={styles.searchContainer}>
-        <TextInput
-          placeholder="Search stocks..."
-          value={searchQuery}
-          onChangeText={(text) => {
-            setSearchQuery(text);
-            setIsSearching(text.length > 0);
-          }}
-          style={styles.searchInput}
-          mode="outlined"
-          left={<TextInput.Icon icon="magnify" color="#E67328" />}
-        />
 
-        {isSearching && searchResults.length > 0 && (
-          <ScrollView
-            style={styles.searchResults}
-            nestedScrollEnabled={true}
-            keyboardShouldPersistTaps="handled"
-          >
-            {searchResults.map((result, index) => (
-              <TouchableOpacity
-                key={generateUniqueId("search", result.symbol, index)}
-                style={styles.searchResultItem}
-                onPress={() => addSearchResultToWatchlist(result)}
-              >
-                <View style={styles.searchResultContent}>
-                  <View>
-                    <Text style={styles.searchResultSymbol}>
-                      {result.symbol}
-                    </Text>
-                    <Text style={styles.searchResultName}>{result.name}</Text>
+      <View style={[styles.stockContainer, { alignSelf: "center" }]}>
+        <LinearGradient
+          colors={["#ff5a1f", "#d03801"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.stockHeader}
+        >
+          <Text style={{ color: "white", fontSize: 28, fontWeight: "bold" }}>
+            Stock Watchlist
+          </Text>
+          <Text style={{ color: "white", fontSize: 16 }}>
+            Keep track of your favorite stocks and discover new opportunities
+          </Text>
+        </LinearGradient>
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Search stocks..."
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setIsSearching(text.length > 0);
+            }}
+            style={styles.searchInput}
+            mode="outlined"
+            left={<TextInput.Icon icon="magnify" color="#E67328" />}
+          />
+          {isSearching && searchResults.length > 0 && (
+            <ScrollView
+              style={styles.searchResults}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              {searchResults.map((result, index) => (
+                <TouchableOpacity
+                  key={generateUniqueId("search", result.symbol, index)}
+                  style={styles.searchResultItem}
+                  onPress={() => addSearchResultToWatchlist(result)}
+                >
+                  <View style={styles.searchResultContent}>
+                    <View>
+                      <Text style={styles.searchResultSymbol}>
+                        {result.symbol}
+                      </Text>
+                      <Text style={styles.searchResultName}>{result.name}</Text>
+                    </View>
+                    <IconButton
+                      icon="plus-circle-outline"
+                      color="#E67328"
+                      size={20}
+                    />
                   </View>
-                  <IconButton
-                    icon="plus-circle-outline"
-                    color="#E67328"
-                    size={20}
-                  />
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-      </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Watchlist</Text>
-        {watchlist.length === 0 ? (
-          <View style={styles.emptyWatchlist}>
-            <Text style={styles.emptyText}>No Stocks in Your Watchlist</Text>
-            <Text style={styles.emptySubText}>Add some above!</Text>
-          </View>
-        ) : (
-          watchlist.map((stock, index) => (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Watchlist</Text>
+          {watchlist.length === 0 ? (
+            <View style={styles.emptyWatchlist}>
+              <Text style={styles.emptyText}>No Stocks in Your Watchlist</Text>
+              <Text style={styles.emptySubText}>Add some above!</Text>
+            </View>
+          ) : (
+            watchlist.map((stock, index) => (
+              <Card
+                key={generateUniqueId("watchlist", stock.symbol, index)}
+                style={[
+                  styles.stockCard,
+                  (stock.changePercent || 0) >= 0
+                    ? styles.stockCardUp
+                    : styles.stockCardDown,
+                ]}
+              >
+                <Card.Content>
+                  <View style={styles.stockRow}>
+                    <IconButton
+                      icon="minus-circle-outline"
+                      color="red"
+                      onPress={() => toggleWatchlist(stock)}
+                    />
+                    <View style={styles.stockInfo}>
+                      <Text style={styles.stockName}>{stock.name}</Text>
+                      <Text style={styles.stockSymbol}>{stock.symbol}</Text>
+                    </View>
+                    <View style={styles.stockPriceContainer}>
+                      <Text style={styles.stockPrice}>
+                        $
+                        {typeof stock.price === "number"
+                          ? stock.price.toFixed(2)
+                          : "0.00"}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.stockChange,
+                          {
+                            color:
+                              (stock.changePercent || 0) >= 0 ? "green" : "red",
+                          },
+                        ]}
+                      >
+                        {(stock.changePercent || 0) >= 0 ? "▲" : "▼"}
+                        {typeof stock.changePercent === "number"
+                          ? Math.abs(stock.changePercent).toFixed(2)
+                          : "0.00"}
+                        %
+                      </Text>
+                    </View>
+                  </View>
+                </Card.Content>
+              </Card>
+            ))
+          )}
+        </View>
+
+        <View style={[styles.section, styles.hotStocksSection]}>
+          <Text style={[styles.sectionTitle, styles.hotStocksTitle]}>
+            Hot Stocks
+          </Text>
+          {hotStocks.map((stock, index) => (
             <Card
-              key={generateUniqueId("watchlist", stock.symbol, index)}
+              key={generateUniqueId("hotstock", stock.symbol, index)}
               style={[
                 styles.stockCard,
                 (stock.changePercent || 0) >= 0
@@ -236,8 +309,8 @@ export default function Watchlist() {
               <Card.Content>
                 <View style={styles.stockRow}>
                   <IconButton
-                    icon="minus-circle-outline"
-                    color="red"
+                    icon="plus-circle-outline"
+                    color="#E67328"
                     onPress={() => toggleWatchlist(stock)}
                   />
                   <View style={styles.stockInfo}>
@@ -260,7 +333,7 @@ export default function Watchlist() {
                         },
                       ]}
                     >
-                      {(stock.changePercent || 0) >= 0 ? "▲" : "▼"}
+                      {(stock.changePercent || 0) >= 0 ? "▲" : "▼"}{" "}
                       {typeof stock.changePercent === "number"
                         ? Math.abs(stock.changePercent).toFixed(2)
                         : "0.00"}
@@ -270,62 +343,8 @@ export default function Watchlist() {
                 </View>
               </Card.Content>
             </Card>
-          ))
-        )}
-      </View>
-
-      <View style={[styles.section, styles.hotStocksSection]}>
-        <Text style={[styles.sectionTitle, styles.hotStocksTitle]}>
-          Hot Stocks
-        </Text>
-        {hotStocks.map((stock, index) => (
-          <Card
-            key={generateUniqueId("hotstock", stock.symbol, index)}
-            style={[
-              styles.stockCard,
-              (stock.changePercent || 0) >= 0
-                ? styles.stockCardUp
-                : styles.stockCardDown,
-            ]}
-          >
-            <Card.Content>
-              <View style={styles.stockRow}>
-                <IconButton
-                  icon="plus-circle-outline"
-                  color="#E67328"
-                  onPress={() => toggleWatchlist(stock)}
-                />
-                <View style={styles.stockInfo}>
-                  <Text style={styles.stockName}>{stock.name}</Text>
-                  <Text style={styles.stockSymbol}>{stock.symbol}</Text>
-                </View>
-                <View style={styles.stockPriceContainer}>
-                  <Text style={styles.stockPrice}>
-                    $
-                    {typeof stock.price === "number"
-                      ? stock.price.toFixed(2)
-                      : "0.00"}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.stockChange,
-                      {
-                        color:
-                          (stock.changePercent || 0) >= 0 ? "green" : "red",
-                      },
-                    ]}
-                  >
-                    {(stock.changePercent || 0) >= 0 ? "▲" : "▼"}{" "}
-                    {typeof stock.changePercent === "number"
-                      ? Math.abs(stock.changePercent).toFixed(2)
-                      : "0.00"}
-                    %
-                  </Text>
-                </View>
-              </View>
-            </Card.Content>
-          </Card>
-        ))}
+          ))}
+        </View>
       </View>
     </ScrollView>
   );
@@ -334,7 +353,7 @@ export default function Watchlist() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4DEAD",
+    backgroundColor: theme.colors.background,
     paddingHorizontal: 26,
   },
   scrollContent: {
@@ -344,8 +363,14 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: "bold",
     color: theme.colors.primary,
-    marginBottom: 16,
-    marginTop: 66,
+    marginTop: 20,
+    textAlign: "center",
+  },
+  smallHeaderText: {
+    fontSize: 16,
+    color: theme.colors.brownheader,
+    marginBottom: 40,
+    marginTop: 20,
     textAlign: "center",
   },
   searchContainer: {
@@ -416,18 +441,24 @@ const styles = StyleSheet.create({
     color: "#E67328",
   },
   emptyWatchlist: {
-    backgroundColor: "#FAE7D2",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 15,
     padding: 20,
+    paddingTop: 60,
+    paddingBottom: 60,
     borderRadius: 10,
     alignItems: "center",
   },
   emptyText: {
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 20,
+    fontWeight: "500",
     color: "#A97E50",
   },
   emptySubText: {
-    fontSize: 14,
+    fontSize: 16,
+    paddingTop: 10,
     color: "#C4A484",
   },
   stockCard: {
@@ -476,5 +507,26 @@ const styles = StyleSheet.create({
   errorText: {
     color: "red",
     textAlign: "center",
+  },
+  stockContainer: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 1100,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 15,
+    elevation: 4, // For Android
+    alignSelf: "center",
+  },
+  stockHeader: {
+    marginHorizontal: -24, // Offset the parent's padding
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    marginTop: -24,
+    padding: 24,
   },
 });

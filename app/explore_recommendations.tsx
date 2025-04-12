@@ -170,7 +170,7 @@ const ExploreRecommendations = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4DEAD",
+    backgroundColor: theme.colors.background,
     padding: 16,
   },
   headerText: {
