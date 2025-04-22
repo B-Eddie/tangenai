@@ -138,7 +138,7 @@ const ExploreRecommendations = () => {
               onPress={() => handleStockPress(item)}
               activeOpacity={0.9}
             >
-              <Card style={styles.card}>
+              <Card style={[styles.card, { borderRadius: 8 }]}>
                 <Card.Content>
                   <View style={styles.headerRow}>
                     <Text style={styles.symbol}>{ticker}</Text>
