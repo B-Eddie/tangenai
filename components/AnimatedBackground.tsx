@@ -3,34 +3,19 @@ import { View, StyleSheet, Animated, Dimensions, useColorScheme } from 'react-na
 
 const { width, height } = Dimensions.get('window');
 
+const NUM_PARTICLES = 15; // Increased number of particles
+
 const AnimatedBackground = ({ particleColor = '#ff7a00', opacityLight = 0.2, opacityDark = 0.3 }) => {
   const isDarkMode = useColorScheme() === 'dark';
   const opacity = isDarkMode ? opacityDark : opacityLight;
   
-  // Create animated values for each particle
-  const particle1 = useRef(new Animated.ValueXY()).current;
-  const particle2 = useRef(new Animated.ValueXY()).current;
-  const particle3 = useRef(new Animated.ValueXY()).current;
-  const particle4 = useRef(new Animated.ValueXY()).current;
-  const particle5 = useRef(new Animated.ValueXY()).current;
-  
-  const rotate1 = useRef(new Animated.Value(0)).current;
-  const rotate2 = useRef(new Animated.Value(0)).current;
-  const rotate3 = useRef(new Animated.Value(0)).current;
-  const rotate4 = useRef(new Animated.Value(0)).current;
-  const rotate5 = useRef(new Animated.Value(0)).current;
-  
-  const scale1 = useRef(new Animated.Value(1)).current;
-  const scale2 = useRef(new Animated.Value(1)).current;
-  const scale3 = useRef(new Animated.Value(1)).current;
-  const scale4 = useRef(new Animated.Value(1)).current;
-  const scale5 = useRef(new Animated.Value(1)).current;
-  
-  const opacity1 = useRef(new Animated.Value(0.3)).current;
-  const opacity2 = useRef(new Animated.Value(0.3)).current;
-  const opacity3 = useRef(new Animated.Value(0.3)).current;
-  const opacity4 = useRef(new Animated.Value(0.3)).current;
-  const opacity5 = useRef(new Animated.Value(0.3)).current;
+  // Create arrays of animated values for particles
+  const particles = Array.from({ length: NUM_PARTICLES }, () => ({
+    position: useRef(new Animated.ValueXY()).current,
+    rotation: useRef(new Animated.Value(0)).current,
+    scale: useRef(new Animated.Value(1)).current,
+    opacity: useRef(new Animated.Value(0.3)).current
+  }));
 
   // Function to create animation for a particle
   const animateParticle = (
@@ -54,7 +39,7 @@ const AnimatedBackground = ({ particleColor = '#ff7a00', opacityLight = 0.2, opa
         // Movement animation
         Animated.timing(position, {
           toValue: { 
-            x: Math.random() * 50 - 25, 
+            x: Math.random() * 100 - 50, 
             y: -50 
           },
           duration: duration * 0.25,
@@ -83,7 +68,7 @@ const AnimatedBackground = ({ particleColor = '#ff7a00', opacityLight = 0.2, opa
         // Movement animation
         Animated.timing(position, {
           toValue: { 
-            x: Math.random() * 50 - 25, 
+            x: Math.random() * 100 - 50, 
             y: 20 
           },
           duration: duration * 0.25,
@@ -112,7 +97,7 @@ const AnimatedBackground = ({ particleColor = '#ff7a00', opacityLight = 0.2, opa
         // Movement animation
         Animated.timing(position, {
           toValue: { 
-            x: Math.random() * 50 - 25, 
+            x: Math.random() * 100 - 50, 
             y: 40 
           },
           duration: duration * 0.25,
@@ -171,155 +156,60 @@ const AnimatedBackground = ({ particleColor = '#ff7a00', opacityLight = 0.2, opa
 
   useEffect(() => {
     // Start animations with different durations and delays for each particle
-    animateParticle(particle1, rotate1, scale1, opacity1, 25000, 0);
-    animateParticle(particle2, rotate2, scale2, opacity2, 30000, 5000);
-    animateParticle(particle3, rotate3, scale3, opacity3, 20000, 10000);
-    animateParticle(particle4, rotate4, scale4, opacity4, 22000, 7000);
-    animateParticle(particle5, rotate5, scale5, opacity5, 18000, 3000);
+    particles.forEach((particle, index) => {
+      const duration = 15000 + Math.random() * 20000; // Random duration between 15-35s
+      const delay = Math.random() * 10000; // Random delay between 0-10s
+      animateParticle(
+        particle.position,
+        particle.rotation,
+        particle.scale,
+        particle.opacity,
+        duration,
+        delay
+      );
+    });
     
     return () => {
       // Cleanup animations if needed (though React Native handles this automatically)
     };
   }, []);
 
-  // Interpolate rotation values to create rotate transform
-  const rotateInterpolate1 = rotate1.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-  
-  const rotateInterpolate2 = rotate2.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-  
-  const rotateInterpolate3 = rotate3.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-  
-  const rotateInterpolate4 = rotate4.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-  
-  const rotateInterpolate5 = rotate5.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   return (
     <View style={styles.container}>
-      <Animated.View
-        style={[
-          styles.particle,
-          {
-            width: 80,
-            height: 80,
-            left: '10%',
-            top: '20%',
-            backgroundColor: particleColor,
-            opacity: opacity1.interpolate({
-              inputRange: [0.3, 0.5],
-              outputRange: [0.3 * opacity, 0.5 * opacity],
-            }),
-            transform: [
-              { translateX: particle1.x },
-              { translateY: particle1.y },
-              { rotate: rotateInterpolate1 },
-              { scale: scale1 }
-            ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.particle,
-          {
-            width: 120,
-            height: 120,
-            left: '70%',
-            top: '60%',
-            backgroundColor: particleColor,
-            opacity: opacity2.interpolate({
-              inputRange: [0.3, 0.5],
-              outputRange: [0.3 * opacity, 0.5 * opacity],
-            }),
-            transform: [
-              { translateX: particle2.x },
-              { translateY: particle2.y },
-              { rotate: rotateInterpolate2 },
-              { scale: scale2 }
-            ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.particle,
-          {
-            width: 60,
-            height: 60,
-            left: '30%',
-            top: '70%',
-            backgroundColor: particleColor,
-            opacity: opacity3.interpolate({
-              inputRange: [0.3, 0.5],
-              outputRange: [0.3 * opacity, 0.5 * opacity],
-            }),
-            transform: [
-              { translateX: particle3.x },
-              { translateY: particle3.y },
-              { rotate: rotateInterpolate3 },
-              { scale: scale3 }
-            ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.particle,
-          {
-            width: 100,
-            height: 100,
-            left: '80%',
-            top: '15%',
-            backgroundColor: particleColor,
-            opacity: opacity4.interpolate({
-              inputRange: [0.3, 0.5],
-              outputRange: [0.3 * opacity, 0.5 * opacity],
-            }),
-            transform: [
-              { translateX: particle4.x },
-              { translateY: particle4.y },
-              { rotate: rotateInterpolate4 },
-              { scale: scale4 }
-            ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.particle,
-          {
-            width: 70,
-            height: 70,
-            left: '50%',
-            top: '50%',
-            backgroundColor: particleColor,
-            opacity: opacity5.interpolate({
-              inputRange: [0.3, 0.5],
-              outputRange: [0.3 * opacity, 0.5 * opacity],
-            }),
-            transform: [
-              { translateX: particle5.x },
-              { translateY: particle5.y },
-              { rotate: rotateInterpolate5 },
-              { scale: scale5 }
-            ],
-          },
-        ]}
-      />
+      {particles.map((particle, index) => {
+        const rotateInterpolate = particle.rotation.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['0deg', '360deg'],
+        });
+
+        const size = 40 + Math.random() * 100; // Random size between 40-140
+        
+        return (
+          <Animated.View
+            key={index}
+            style={[
+              styles.particle,
+              {
+                width: size,
+                height: size,
+                left: `${Math.random() * 80 + 10}%`, // Random position between 10-90%
+                top: `${Math.random() * 80 + 10}%`,
+                backgroundColor: particleColor,
+                opacity: particle.opacity.interpolate({
+                  inputRange: [0.3, 0.5],
+                  outputRange: [0.3 * opacity, 0.5 * opacity],
+                }),
+                transform: [
+                  { translateX: particle.position.x },
+                  { translateY: particle.position.y },
+                  { rotate: rotateInterpolate },
+                  { scale: particle.scale }
+                ],
+              },
+            ]}
+          />
+        );
+      })}
     </View>
   );
 };

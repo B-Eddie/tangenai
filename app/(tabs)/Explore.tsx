@@ -11,6 +11,7 @@ import { getStockRecommendation } from "../services/stockService";
 import Constants from "expo-constants";
 import { router, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import AnimatedBackground from "../../components/AnimatedBackground";
 
 interface StockData {
   date: string;
@@ -314,7 +315,7 @@ export default function ExploreStocks() {
             mode="outlined"
             keyboardType="numeric"
             maxLength={10}
-            right={<TextInput.Affix text="CAD" />}
+            right={<TextInput.Affix text="USD" />}
           />
           <View style={{ width: 16 }} />
           <TextInput
@@ -329,7 +330,7 @@ export default function ExploreStocks() {
             mode="outlined"
             keyboardType="numeric"
             maxLength={10}
-            right={<TextInput.Affix text="CAD" />}
+            right={<TextInput.Affix text="USD" />}
           />
         </View>
 
@@ -364,7 +365,10 @@ export default function ExploreStocks() {
 
         <Text style={styles.labelText}>Investing Horizon</Text>
         <Dropdown
-          style={[styles.pickerContainer, { height: 50, padding: 10, backgroundColor: "#f5f7fa"  }]}
+          style={[
+            styles.pickerContainer,
+            { height: 50, padding: 10, backgroundColor: "#f5f7fa" },
+          ]}
           placeholderStyle={styles.dropdownPlaceholder}
           selectedTextStyle={styles.dropdownSelectedText}
           data={dropdownData}
@@ -410,11 +414,16 @@ export default function ExploreStocks() {
         onPress={handleSubmit}
         loading={loading}
         disabled={loading}
-        style={styles.button}
+        style={[styles.button, { alignSelf: "center" }]}
         labelStyle={styles.buttonLabel}
       >
         Find Recommendations
       </Button>
+      <AnimatedBackground
+        particleColor="#ff7a00"
+        opacityLight={0.15}
+        opacityDark={0.25}
+      />
     </ScrollView>
   );
 }
@@ -446,7 +455,7 @@ const styles = StyleSheet.create({
   stockContainer: {
     flex: 1,
     width: "100%",
-    maxWidth: 1100,
+    maxWidth: 900,
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 24,
@@ -521,8 +530,16 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 50,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     borderRadius: 10,
+    maxWidth: 900,
+    width: "100%",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   buttonLabel: {
     fontSize: 20,

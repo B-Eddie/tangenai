@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { parse } from "node-html-parser";
+import { generateSentimentRationale } from "./geminiService";
 
 // Market data endpoints
 const FINNHUB_API_URL = "https://finnhub.io/api/v1";
@@ -460,7 +461,7 @@ export const getStockRecommendation = async (
           const [stockData, news, articles] = await Promise.all([
             fetchStockData(company, horizon),
             fetchCompanyNews(company),
-            fetchCompanyArticles(company), // Use the new function here
+            fetchCompanyArticles(company),
           ]);
 
           if (!stockData || (!news.length && !articles.length)) return null;
@@ -473,13 +474,25 @@ export const getStockRecommendation = async (
             .map((article: any) => article.text || "")
             .filter((text: string) => text.length > 0);
 
-          const allTexts = [...newsTexts, ...articleTexts]; // Combine news and articles
+          const allTexts = [...newsTexts, ...articleTexts];
 
           if (allTexts.length === 0) return null;
 
           const sentiment = await analyzeArticles(allTexts);
+          const sentimentScore = sentiment.total
+            ? 50 +
+              (sentiment.positive / sentiment.total -
+                sentiment.negative / sentiment.total) *
+                50
+            : 50;
 
-          // Rest of the function remains the same
+          // Generate sentiment rationale
+          const sentimentRationale = await generateSentimentRationale(
+            company,
+            [...news, ...articles],
+            sentimentScore
+          );
+
           const components = {
             recent_performance: Math.min(
               Math.max(((stockData.recent_growth + 20) / 40) * 100, 0),
@@ -489,12 +502,7 @@ export const getStockRecommendation = async (
               Math.max(((stockData.historical_growth + 50) / 100) * 100, 0),
               100
             ),
-            sentiment_score: sentiment.total
-              ? 50 +
-                (sentiment.positive / sentiment.total -
-                  sentiment.negative / sentiment.total) *
-                  50
-              : 50,
+            sentiment_score: sentimentScore,
             risk_factor: Math.max(0, stockData.volatility * 100),
           };
 
@@ -526,7 +534,8 @@ export const getStockRecommendation = async (
               sentiment,
               components,
               company,
-              articles, // Include articles in the details
+              articles,
+              sentiment_rationale: sentimentRationale,
             },
           };
         } catch (error) {
@@ -550,7 +559,8 @@ export const getStockRecommendation = async (
     console.error("Recommendation service error:", error);
     return {
       status: "error",
-      message: error.message,
+      message:
+        error instanceof Error ? error.message : "An unknown error occurred",
       recommendations: [],
     };
   }

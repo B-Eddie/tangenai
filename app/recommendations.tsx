@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Dimensions } from "react-native";
 import { Text, Card, Button, ProgressBar } from "react-native-paper";
 import { useLocalSearchParams, router } from "expo-router";
 import { theme } from "../components/theme";
+import AnimatedBackground from "../components/AnimatedBackground";
 
 interface ComponentScores {
   historical_growth?: number;
@@ -30,6 +31,7 @@ interface Details {
   components?: ComponentScores;
   sentiment?: SentimentData;
   stock_data?: StockData;
+  sentiment_rationale?: string;
 }
 
 interface Recommendation {
@@ -193,7 +195,13 @@ export default function Recommendations() {
                     ideal: "low",
                   },
                 ].map((metric, idx) => (
-                  <View key={idx} style={[styles.progressContainer, { marginTop: width < 600 ? 0 : 10, }]}>
+                  <View
+                    key={idx}
+                    style={[
+                      styles.progressContainer,
+                      { marginTop: width < 600 ? 0 : 10 },
+                    ]}
+                  >
                     <View style={styles.textContainer}>
                       <Text style={styles.componentLabel}>{metric.label}</Text>
                       <Text style={styles.componentValue}>
@@ -203,7 +211,7 @@ export default function Recommendations() {
                     <ProgressBar
                       progress={(metric.value ?? 0) / 100}
                       color={metric.color}
-                      style={styles.progressBar}
+                      style={[styles.progressBar, { width: "100%" }]}
                     />
                     <Text style={styles.idealLabel}>
                       {metric.ideal === "high"
@@ -251,10 +259,20 @@ export default function Recommendations() {
                     <ProgressBar
                       progress={(sentimentItem.value ?? 0) / totalSentiment}
                       color={sentimentItem.color}
-                      style={styles.progressBar}
+                      style={[styles.progressBar, { width: "100%" }]}
                     />
                   </View>
                 ))}
+                {rec.details?.sentiment_rationale && (
+                  <View style={styles.rationaleContainer}>
+                    <Text style={styles.rationaleTitle}>
+                      Sentiment Analysis
+                    </Text>
+                    <Text style={styles.rationaleText}>
+                      {rec.details.sentiment_rationale}
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* <Text style={styles.dataPoints}>
@@ -265,6 +283,11 @@ export default function Recommendations() {
                 Overall Score: {safeParseFloat(rec.score)}
               </Text>
             </Card.Content>
+            <AnimatedBackground
+              particleColor="#ff7a00"
+              opacityLight={0.15}
+              opacityDark={0.25}
+            />
           </Card>
         );
       })}
@@ -297,6 +320,8 @@ const styles = StyleSheet.create({
   summaryCard: {
     marginBottom: 16,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 8,
+    maxWidth: 1100,
   },
   summaryTitle: {
     fontSize: 20,
@@ -313,6 +338,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: "#fff",
     elevation: 4,
+    borderRadius: 8,
+    maxWidth: 1100,
   },
   headerRow: {
     flexDirection: "row",
@@ -405,7 +432,6 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 25,
-    width: width < 600 ? 320 : 1200,
     alignSelf: "stretch",
     borderRadius: 4,
   },
@@ -428,6 +454,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     textAlign: "center",
     marginTop: 12,
+    paddingBottom: 12,
   },
   errorText: {
     fontSize: 18,
@@ -440,6 +467,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: theme.colors.primary,
+    maxWidth: 1100,
   },
   buttonLabel: {
     fontSize: 18,
@@ -451,5 +479,22 @@ const styles = StyleSheet.create({
     marginTop: width < 600 ? 4 : -20,
     fontStyle: "italic",
     textAlign: "right",
+  },
+  rationaleContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 8,
+  },
+  rationaleTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.text,
+    marginBottom: 8,
+  },
+  rationaleText: {
+    fontSize: 14,
+    color: theme.colors.text,
+    lineHeight: 20,
   },
 });

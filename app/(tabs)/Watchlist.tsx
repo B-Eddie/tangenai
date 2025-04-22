@@ -17,6 +17,7 @@ import {
 import { theme } from "../../components/theme";
 import debounce from "lodash/debounce";
 import { LinearGradient } from "expo-linear-gradient";
+import AnimatedBackground from "../../components/AnimatedBackground";
 
 interface Stock {
   symbol: string;
@@ -346,6 +347,11 @@ export default function Watchlist() {
           ))}
         </View>
       </View>
+      <AnimatedBackground
+        particleColor="#ff7a00"
+        opacityLight={0.15}
+        opacityDark={0.25}
+      />
     </ScrollView>
   );
 }
@@ -511,7 +517,7 @@ const styles = StyleSheet.create({
   stockContainer: {
     flex: 1,
     width: "100%",
-    maxWidth: 1100,
+    maxWidth: 900,
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 24,
