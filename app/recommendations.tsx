@@ -104,202 +104,205 @@ export default function Recommendations() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.headerText}>Market Analysis</Text>
+      <View style={{ alignSelf: "center" }}>
+        <Card style={styles.summaryCard}>
+          <Card.Content>
+            <Text style={styles.summaryTitle}>Analysis Overview</Text>
+            <Text style={styles.summaryText}>
+              Investment Horizon:{" "}
+              {parsedData.metadata?.horizon === "short-term"
+                ? "Short Term (30 days)"
+                : "Long Term (5 years)"}
+            </Text>
+            <Text style={styles.summaryText}>
+              Analysis Date:{" "}
+              {parsedData.metadata?.timestamp
+                ? new Date(parsedData.metadata.timestamp).toLocaleString()
+                : "N/A"}
+            </Text>
+            <Text style={styles.summaryText}>
+              Companies Analyzed: {parsedData.recommendations.length}
+            </Text>
+          </Card.Content>
+        </Card>
 
-      <Card style={styles.summaryCard}>
-        <Card.Content>
-          <Text style={styles.summaryTitle}>Analysis Overview</Text>
-          <Text style={styles.summaryText}>
-            Investment Horizon:{" "}
-            {parsedData.metadata?.horizon === "short-term"
-              ? "Short Term (30 days)"
-              : "Long Term (5 years)"}
-          </Text>
-          <Text style={styles.summaryText}>
-            Analysis Date:{" "}
-            {parsedData.metadata?.timestamp
-              ? new Date(parsedData.metadata.timestamp).toLocaleString()
-              : "N/A"}
-          </Text>
-          <Text style={styles.summaryText}>
-            Companies Analyzed: {parsedData.recommendations.length}
-          </Text>
-        </Card.Content>
-      </Card>
+        {parsedData.recommendations.map((rec, index) => {
+          const components = rec.details?.components ?? {};
+          const sentiment = rec.details?.sentiment ?? {};
+          const stockData = rec.details?.stock_data ?? {};
+          const totalSentiment = sentiment.total ?? 1; // Prevent division by zero
 
-      {parsedData.recommendations.map((rec, index) => {
-        const components = rec.details?.components ?? {};
-        const sentiment = rec.details?.sentiment ?? {};
-        const stockData = rec.details?.stock_data ?? {};
-        const totalSentiment = sentiment.total ?? 1; // Prevent division by zero
-
-        return (
-          <Card key={index} style={styles.recommendationCard}>
-            <Card.Content>
-              <View style={styles.headerRow}>
-                <Text style={styles.companyName}>
-                  {rec.company?.toUpperCase() ?? "Unknown Company"}
-                </Text>
-                <Text style={styles.sentimentScore}>
-                  Sentiment Score: {getSentimentEmoji(sentiment.score)}{" "}
-                  {safePercentage((sentiment.score ?? 0) * 100)}
-                </Text>
-              </View>
-
-              <View style={styles.metricsContainer}>
-                <View style={styles.metricBox}>
-                  <Text style={styles.metricLabel}>Recent Growth</Text>
-                  <Text
-                    style={[
-                      styles.metricValue,
-                      { color: getGrowthColor(stockData.recent_growth) },
-                    ]}
-                  >
-                    {safePercentage(stockData.recent_growth)}
+          return (
+            <Card key={index} style={styles.recommendationCard}>
+              <Card.Content>
+                <View style={styles.headerRow}>
+                  <Text style={styles.companyName}>
+                    {rec.company?.toUpperCase() ?? "Unknown Company"}
+                  </Text>
+                  <Text style={styles.sentimentScore}>
+                    Sentiment Score: {getSentimentEmoji(sentiment.score)}{" "}
+                    {safePercentage((sentiment.score ?? 0) * 100)}
                   </Text>
                 </View>
 
-                <View style={styles.metricBox}>
-                  <Text style={styles.metricLabel}>Historical Growth</Text>
-                  <Text
-                    style={[
-                      styles.metricValue,
-                      { color: getGrowthColor(stockData.historical_growth) },
-                    ]}
-                  >
-                    {safePercentage(stockData.historical_growth)}
-                  </Text>
+                <View style={styles.metricsContainer}>
+                  <View style={styles.metricBox}>
+                    <Text style={styles.metricLabel}>Recent Growth</Text>
+                    <Text
+                      style={[
+                        styles.metricValue,
+                        { color: getGrowthColor(stockData.recent_growth) },
+                      ]}
+                    >
+                      {safePercentage(stockData.recent_growth)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.metricBox}>
+                    <Text style={styles.metricLabel}>Historical Growth</Text>
+                    <Text
+                      style={[
+                        styles.metricValue,
+                        { color: getGrowthColor(stockData.historical_growth) },
+                      ]}
+                    >
+                      {safePercentage(stockData.historical_growth)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.metricBox}>
+                    <Text style={styles.metricLabel}>Volatility</Text>
+                    <Text style={styles.metricValue}>
+                      {safeParseFloat(stockData.volatility)}
+                    </Text>
+                  </View>
                 </View>
 
-                <View style={styles.metricBox}>
-                  <Text style={styles.metricLabel}>Volatility</Text>
-                  <Text style={styles.metricValue}>
-                    {safeParseFloat(stockData.volatility)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Component Scores */}
-              <View style={styles.componentScores}>
-                <Text style={styles.componentTitle}>Performance Metrics</Text>
-                {[
-                  {
-                    label: "Recent Performance",
-                    value: components.recent_performance,
-                    color: theme.colors.primary,
-                    ideal: "high", // Higher is better
-                  },
-                  {
-                    label: "Risk Factor",
-                    value: components.risk_factor,
-                    color: "#FF9800",
-                    ideal: "low",
-                  },
-                ].map((metric, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.progressContainer,
-                      { marginTop: width < 600 ? 0 : 10 },
-                    ]}
-                  >
-                    <View style={styles.textContainer}>
-                      <Text style={styles.componentLabel}>{metric.label}</Text>
-                      <Text style={styles.componentValue}>
-                        {safePercentage(metric.value)}
+                {/* Component Scores */}
+                <View style={styles.componentScores}>
+                  <Text style={styles.componentTitle}>Performance Metrics</Text>
+                  {[
+                    {
+                      label: "Recent Performance",
+                      value: components.recent_performance,
+                      color: theme.colors.primary,
+                      ideal: "high", // Higher is better
+                    },
+                    {
+                      label: "Risk Factor",
+                      value: components.risk_factor,
+                      color: "#FF9800",
+                      ideal: "low",
+                    },
+                  ].map((metric, idx) => (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.progressContainer,
+                        { marginTop: width < 600 ? 0 : 10 },
+                      ]}
+                    >
+                      <View style={styles.textContainer}>
+                        <Text style={styles.componentLabel}>
+                          {metric.label}
+                        </Text>
+                        <Text style={styles.componentValue}>
+                          {safePercentage(metric.value)}
+                        </Text>
+                      </View>
+                      <ProgressBar
+                        progress={(metric.value ?? 0) / 100}
+                        color={metric.color}
+                        style={[styles.progressBar, { width: "100%" }]}
+                      />
+                      <Text style={styles.idealLabel}>
+                        {metric.ideal === "high"
+                          ? "Higher is better"
+                          : "Lower is better"}
                       </Text>
                     </View>
-                    <ProgressBar
-                      progress={(metric.value ?? 0) / 100}
-                      color={metric.color}
-                      style={[styles.progressBar, { width: "100%" }]}
-                    />
-                    <Text style={styles.idealLabel}>
-                      {metric.ideal === "high"
-                        ? "Higher is better"
-                        : "Lower is better"}
-                    </Text>
-                  </View>
-                ))}
-              </View>
+                  ))}
+                </View>
 
-              {/* Sentiment Analysis */}
-              <View style={styles.sentimentContainer}>
-                <Text style={styles.sentimentTitle}>Market Sentiment</Text>
-                {[
-                  {
-                    label: "Positive",
-                    value: sentiment.positive,
-                    color: "#4CAF50",
-                  },
-                  {
-                    label: "Neutral",
-                    value: sentiment.neutral,
-                    color: "#FFC107",
-                  },
-                  {
-                    label: "Negative",
-                    value: sentiment.negative,
-                    color: "#F44336",
-                  },
-                ].map((sentimentItem, idx) => (
-                  <View
-                    key={idx}
-                    style={[styles.sentimentBar, styles.progressContainer]}
-                  >
-                    <View style={styles.textContainer}>
-                      <Text style={styles.sentimentLabel}>
-                        {sentimentItem.label}
+                {/* Sentiment Analysis */}
+                <View style={styles.sentimentContainer}>
+                  <Text style={styles.sentimentTitle}>Market Sentiment</Text>
+                  {[
+                    {
+                      label: "Positive",
+                      value: sentiment.positive,
+                      color: "#4CAF50",
+                    },
+                    {
+                      label: "Neutral",
+                      value: sentiment.neutral,
+                      color: "#FFC107",
+                    },
+                    {
+                      label: "Negative",
+                      value: sentiment.negative,
+                      color: "#F44336",
+                    },
+                  ].map((sentimentItem, idx) => (
+                    <View
+                      key={idx}
+                      style={[styles.sentimentBar, styles.progressContainer]}
+                    >
+                      <View style={styles.textContainer}>
+                        <Text style={styles.sentimentLabel}>
+                          {sentimentItem.label}
+                        </Text>
+                        <Text style={styles.sentimentValue}>
+                          {safePercentage(
+                            ((sentimentItem.value ?? 0) / totalSentiment) * 100
+                          )}
+                        </Text>
+                      </View>
+                      <ProgressBar
+                        progress={(sentimentItem.value ?? 0) / totalSentiment}
+                        color={sentimentItem.color}
+                        style={[styles.progressBar, { width: "100%" }]}
+                      />
+                    </View>
+                  ))}
+                  {rec.details?.sentiment_rationale && (
+                    <View style={styles.rationaleContainer}>
+                      <Text style={styles.rationaleTitle}>
+                        Sentiment Analysis
                       </Text>
-                      <Text style={styles.sentimentValue}>
-                        {safePercentage(
-                          ((sentimentItem.value ?? 0) / totalSentiment) * 100
-                        )}
+                      <Text style={styles.rationaleText}>
+                        {rec.details.sentiment_rationale}
                       </Text>
                     </View>
-                    <ProgressBar
-                      progress={(sentimentItem.value ?? 0) / totalSentiment}
-                      color={sentimentItem.color}
-                      style={[styles.progressBar, { width: "100%" }]}
-                    />
-                  </View>
-                ))}
-                {rec.details?.sentiment_rationale && (
-                  <View style={styles.rationaleContainer}>
-                    <Text style={styles.rationaleTitle}>
-                      Sentiment Analysis
-                    </Text>
-                    <Text style={styles.rationaleText}>
-                      {rec.details.sentiment_rationale}
-                    </Text>
-                  </View>
-                )}
-              </View>
+                  )}
+                </View>
 
-              {/* <Text style={styles.dataPoints}>
+                {/* <Text style={styles.dataPoints}>
                 Based on {stockData.data_points ?? 0} data points
               </Text> */}
 
-              <Text style={styles.overallScore}>
-                Overall Score: {safeParseFloat(rec.score)}
-              </Text>
-            </Card.Content>
-            <AnimatedBackground
-              particleColor="#ff7a00"
-              opacityLight={0.15}
-              opacityDark={0.25}
-            />
-          </Card>
-        );
-      })}
+                <Text style={styles.overallScore}>
+                  Overall Score: {safeParseFloat(rec.score)}
+                </Text>
+              </Card.Content>
+              <AnimatedBackground
+                particleColor="#ff7a00"
+                opacityLight={0.15}
+                opacityDark={0.25}
+              />
+            </Card>
+          );
+        })}
 
-      <Button
-        mode="contained"
-        onPress={() => router.back()}
-        style={styles.backButton}
-        labelStyle={styles.buttonLabel}
-      >
-        Back to Search
-      </Button>
+        <Button
+          mode="contained"
+          onPress={() => router.back()}
+          style={styles.backButton}
+          labelStyle={styles.buttonLabel}
+        >
+          Back to Search
+        </Button>
+      </View>
     </ScrollView>
   );
 }

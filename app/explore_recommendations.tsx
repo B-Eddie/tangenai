@@ -96,84 +96,85 @@ const ExploreRecommendations = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.contentContainer}>
-        <AnimatedBackground
-          particleColor="#ff7a00"
-          opacityLight={0.15}
-          opacityDark={0.25}
-        />
-        <Text style={styles.headerText}>Stock Analysis</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <AnimatedBackground
+        particleColor="#ff7a00"
+        opacityLight={0.15}
+        opacityDark={0.25}
+      />
+      <Text style={styles.headerText}>Stock Analysis</Text>
 
-        <View style={styles.sortContainer}>
-          <Button
-            mode={sortBy === "score" ? "contained" : "outlined"}
-            onPress={() => setSortBy("score")}
-            style={styles.sortButton}
-            labelStyle={styles.sortLabel}
-          >
-            Overall Score
-          </Button>
-          <Button
-            mode={sortBy === "sentiment" ? "contained" : "outlined"}
-            onPress={() => setSortBy("sentiment")}
-            style={styles.sortButton}
-            labelStyle={styles.sortLabel}
-          >
-            Sentiment
-          </Button>
-        </View>
-
-        <View style={{ width: "100%", maxWidth: 900, minWidth: 300 }}>
-          {sortedRecommendations.map((item, index) => {
-            const sentimentScore = item.details?.sentiment?.score || 0;
-            const ticker = item?.details?.company || 0;
-            const color = getSentimentColor(sentimentScore);
-
-            return (
-              <TouchableOpacity
-                key={index}
-                onPress={() => handleStockPress(item)}
-                activeOpacity={0.9}
-              >
-                <Card style={styles.card}>
-                  <Card.Content>
-                    <View style={styles.headerRow}>
-                      <Text style={styles.symbol}>{ticker}</Text>
-                      <Text style={[styles.sentimentScore, { color }]}>
-                        {getSentimentEmoji(sentimentScore)}{" "}
-                        {(sentimentScore * 100).toFixed(1)}%
-                      </Text>
-                    </View>
-
-                    <View style={styles.scoreRow}>
-                      <Text style={styles.scoreLabel}>Overall Score:</Text>
-                      <Text style={styles.scoreValue}>
-                        {item.score.toFixed(2)}
-                      </Text>
-                    </View>
-
-                    <ProgressBar
-                      progress={sentimentScore}
-                      color={color}
-                      style={styles.progressBar}
-                    />
-                  </Card.Content>
-                </Card>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
+      <View style={styles.sortContainer}>
         <Button
-          mode="contained"
-          onPress={() => router.back()}
-          style={styles.backButton}
-          labelStyle={styles.buttonLabel}
+          mode={sortBy === "score" ? "contained" : "outlined"}
+          onPress={() => setSortBy("score")}
+          style={styles.sortButton}
+          labelStyle={styles.sortLabel}
         >
-          Back to Search
+          Overall Score
+        </Button>
+        <Button
+          mode={sortBy === "sentiment" ? "contained" : "outlined"}
+          onPress={() => setSortBy("sentiment")}
+          style={styles.sortButton}
+          labelStyle={styles.sortLabel}
+        >
+          Sentiment
         </Button>
       </View>
+
+      <View style={{ width: "100%", maxWidth: 900 }}>
+        {sortedRecommendations.map((item, index) => {
+          const sentimentScore = item.details?.sentiment?.score || 0;
+          const ticker = item?.details?.company || 0;
+          const color = getSentimentColor(sentimentScore);
+
+          return (
+            <TouchableOpacity
+              key={index}
+              onPress={() => handleStockPress(item)}
+              activeOpacity={0.9}
+            >
+              <Card style={styles.card}>
+                <Card.Content>
+                  <View style={styles.headerRow}>
+                    <Text style={styles.symbol}>{ticker}</Text>
+                    <Text style={[styles.sentimentScore, { color }]}>
+                      {getSentimentEmoji(sentimentScore)}{" "}
+                      {(sentimentScore * 100).toFixed(1)}%
+                    </Text>
+                  </View>
+
+                  <View style={styles.scoreRow}>
+                    <Text style={styles.scoreLabel}>Overall Score:</Text>
+                    <Text style={styles.scoreValue}>
+                      {item.score.toFixed(2)}
+                    </Text>
+                  </View>
+
+                  <ProgressBar
+                    progress={sentimentScore}
+                    color={color}
+                    style={styles.progressBar}
+                  />
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <Button
+        mode="contained"
+        onPress={() => router.back()}
+        style={styles.backButton}
+        labelStyle={styles.buttonLabel}
+      >
+        Back to Search
+      </Button>
     </ScrollView>
   );
 };
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   contentContainer: {
-    flex: 1,
+    flexGrow: 1,
     padding: 16,
     alignItems: "center",
   },
@@ -194,6 +195,8 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     textAlign: "center",
     marginVertical: 20,
+    width: "100%",
+    maxWidth: 900,
   },
   sortContainer: {
     flexDirection: "row",
@@ -201,7 +204,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     width: "100%",
     maxWidth: 900,
-    minWidth: 300,
   },
   sortButton: {
     flex: 1,
@@ -217,14 +219,13 @@ const styles = StyleSheet.create({
     elevation: 4,
     width: "100%",
     maxWidth: 900,
-    minWidth: 300,
-    borderRadius: 8,
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+    width: "100%",
   },
   symbol: {
     fontSize: 24,
@@ -240,6 +241,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+    width: "100%",
   },
   scoreLabel: {
     fontSize: 16,
@@ -254,12 +256,15 @@ const styles = StyleSheet.create({
     height: 25,
     borderRadius: 4,
     marginTop: 8,
+    width: "100%",
   },
   errorText: {
     fontSize: 18,
     color: "#666",
     textAlign: "center",
     marginVertical: 20,
+    width: "100%",
+    maxWidth: 900,
   },
   backButton: {
     marginVertical: 20,
@@ -269,7 +274,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     width: "100%",
     maxWidth: 900,
-    minWidth: 300,
   },
   buttonLabel: {
     fontSize: 18,
