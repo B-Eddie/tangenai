@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView, Alert } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
 import { router, useRouter } from "expo-router";
 import { theme } from "../../components/theme";
@@ -24,7 +24,6 @@ interface DropdownItem {
   value: string;
 }
 
-// const router = useRouter();
 function Home() {
   const API_URL = useContext(APIContext);
   const [companies, setCompanies] = useState<string>("");
@@ -34,6 +33,7 @@ function Home() {
   const [stockData, setStockData] = useState<StockData[]>([]);
   const [chartType, setChartType] = useState<"line" | "candlestick">("line");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
@@ -86,19 +86,134 @@ function Home() {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!companies.trim()) {
-      setError("Please enter a company ticker");
-      return;
+  const validateInput = (input: string): string[] | null => {
+    if (!input.trim()) {
+      setError("Please enter at least one company ticker");
+      return null;
     }
 
+    const tickers = input
+      .split(",")
+      .map((ticker) => ticker.trim().toUpperCase())
+      .filter((ticker) => ticker.length > 0);
+
+    if (tickers.length === 0) {
+      setError("Please enter valid company tickers");
+      return null;
+    }
+
+    const invalidTickers = tickers.filter(
+      (ticker) => !/^[A-Z0-9.\-^]+$/.test(ticker)
+    );
+    if (invalidTickers.length > 0) {
+      setError(`Invalid ticker symbol(s): ${invalidTickers.join(", ")}`);
+      return null;
+    }
+
+    return tickers;
+  };
+
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     setLoading(true);
     setError(null);
 
     try {
-      const recommendationsData = await getStockRecommendation(
-        companies.split(",").map((c) => c.trim().toUpperCase()),
-        investingHorizon
+      const tickers = validateInput(companies);
+      if (!tickers) {
+        setLoading(false);
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log(
+        `Processing ${tickers.length} tickers: ${tickers.join(", ")}`
+      );
+
+      let retryCount = 0;
+      let recommendationsData = null;
+      const MAX_RETRIES = 2;
+
+      while (retryCount <= MAX_RETRIES && !recommendationsData) {
+        try {
+          if (tickers.length > 5) {
+            console.log("Processing large number of tickers in batches");
+            const BATCH_SIZE = 5;
+            let allRecommendations = [];
+
+            for (let i = 0; i < tickers.length; i += BATCH_SIZE) {
+              const batchTickers = tickers.slice(i, i + BATCH_SIZE);
+              console.log(
+                `Processing batch ${i / BATCH_SIZE + 1} with ${
+                  batchTickers.length
+                } tickers`
+              );
+
+              const batchResponse = await getStockRecommendation(
+                batchTickers,
+                investingHorizon
+              );
+
+              if (batchResponse?.recommendations?.length > 0) {
+                allRecommendations = [
+                  ...allRecommendations,
+                  ...batchResponse.recommendations,
+                ];
+              }
+            }
+
+            if (allRecommendations.length > 0) {
+              recommendationsData = {
+                status: "success",
+                recommendations: allRecommendations.sort(
+                  (a, b) => (b.score || 0) - (a.score || 0)
+                ),
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  horizon: investingHorizon,
+                },
+              };
+            } else {
+              throw new Error(
+                "Could not get recommendations for any of the provided tickers"
+              );
+            }
+          } else {
+            recommendationsData = await getStockRecommendation(
+              tickers,
+              investingHorizon
+            );
+          }
+
+          if (recommendationsData?.recommendations?.length > 0) {
+            break;
+          } else {
+            throw new Error("No recommendations received from the service");
+          }
+        } catch (err) {
+          console.warn(`Attempt ${retryCount + 1} failed:`, err);
+
+          if (retryCount === MAX_RETRIES) {
+            throw err;
+          }
+        }
+        retryCount++;
+      }
+
+      if (
+        !recommendationsData ||
+        !recommendationsData.recommendations ||
+        recommendationsData.recommendations.length === 0
+      ) {
+        throw new Error(
+          "Could not get recommendations for the provided stock tickers. Try different symbols."
+        );
+      }
+
+      console.log(
+        `Successfully retrieved ${recommendationsData.recommendations.length} recommendations`
       );
 
       router.push({
@@ -107,9 +222,14 @@ function Home() {
       });
     } catch (error) {
       console.error("Error:", error);
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "An error occurred while getting recommendations. Please try again."
+      );
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -147,10 +267,13 @@ function Home() {
           <Text style={styles.labelText}>Stock Ticker</Text>
           <TextInput
             value={companies}
-            onChangeText={setCompanies}
+            onChangeText={(text) => {
+              setCompanies(text);
+              setError(null);
+            }}
             mode="outlined"
             style={styles.input}
-            placeholder="Enter stock symbol (e.g., MSFT)"
+            placeholder="Enter stock symbol (e.g., MSFT, AAPL, GOOGL)"
             placeholderTextColor="#999999"
             outlineColor={theme.colors.border}
             activeOutlineColor={theme.colors.primary}
@@ -222,7 +345,7 @@ function Home() {
           mode="contained"
           onPress={handleSubmit}
           loading={loading}
-          disabled={loading}
+          disabled={loading || isSubmitting}
           style={styles.button}
           labelStyle={styles.buttonLabel}
         >
@@ -272,11 +395,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
     shadowRadius: 15,
-    elevation: 4, // For Android
+    elevation: 4,
     alignSelf: "center",
   },
   stockHeader: {
-    marginHorizontal: -24, // Offset the parent's padding
+    marginHorizontal: -24,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     marginTop: -24,

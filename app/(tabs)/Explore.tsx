@@ -127,87 +127,151 @@ export default function ExploreStocks() {
     setError(null);
 
     try {
-      // 1. Get form inputs with validation
-      const horizon = investingHorizon || "long-term"; // Add default
-      const maxRec = parseInt(maxRecommendations) || 10; // Ensure number
-      const maxResults = maxRec + 25;
+      const horizon = investingHorizon || "long-term";
+      const maxRec = parseInt(maxRecommendations) || 10;
+      const maxResults = Math.max(maxRec * 3, 50);
 
-      // 2. Validate API key
-      const apiKey = Constants.expoConfig?.extra?.FMP_API;
+      const apiKey =
+        Constants.expoConfig?.extra?.FMP_API || process.env.FMP_API;
       if (!apiKey) {
-        throw new Error("API configuration error - please contact support");
+        throw new Error(
+          "API configuration error - please check your API settings"
+        );
       }
 
-      // 3. Enhanced API request with error handling
-      const response = await axios.get(
-        "https://financialmodelingprep.com/api/v3/stock-screener",
-        {
-          params: {
-            exchange: "nasdaq",
-            sector: selectedSector === "All" ? null : selectedSector,
-            priceMoreThan: minCost || null,
-            priceLowerThan: maxCost || null,
-            apikey: apiKey,
-            limit: maxResults, // Request more upfront
-          },
-          timeout: 10000, // Add timeout
+      let response;
+      let retryCount = 0;
+      const MAX_RETRIES = 2;
+
+      while (retryCount <= MAX_RETRIES) {
+        try {
+          response = await axios.get(
+            "https://financialmodelingprep.com/api/v3/stock-screener",
+            {
+              params: {
+                exchange: "nasdaq,nyse",
+                sector: selectedSector === "All" ? null : selectedSector,
+                priceMoreThan: minCost || null,
+                priceLowerThan: maxCost || null,
+                apikey: apiKey,
+                limit: maxResults,
+              },
+              timeout: 15000,
+            }
+          );
+
+          if (response.data && Array.isArray(response.data)) {
+            break;
+          }
+        } catch (err) {
+          console.warn(`API attempt ${retryCount + 1} failed:`, err);
+          if (retryCount === MAX_RETRIES) throw err;
         }
-      );
-
-      // 4. Validate response structure
-      if (!response.data || !Array.isArray(response.data)) {
-        throw new Error("Invalid API response format");
+        retryCount++;
       }
-      console.log("Stocks:", response.data);
-      // 5. Safer data processing
-      const filteredStocks = response.data
+
+      if (!response || !response.data || !Array.isArray(response.data)) {
+        throw new Error(
+          "Could not retrieve stock data. Please try again later."
+        );
+      }
+
+      console.log(`Retrieved ${response.data.length} stocks from screener API`);
+
+      let filteredStocks = response.data
         .filter((stock) => {
           try {
+            if (!stock || !stock.symbol) return false;
+
             const price = parseFloat(stock?.price || 0);
             const sectorMatch =
-              selectedSector === "All" || stock.sector === selectedSector;
+              selectedSector === "All" ||
+              stock.sector === selectedSector ||
+              (stock.industry || "")
+                .toLowerCase()
+                .includes(selectedSector.toLowerCase());
+
             const priceMatch =
               (!minCost || price >= parseFloat(minCost)) &&
               (!maxCost || price <= parseFloat(maxCost));
+
             return sectorMatch && priceMatch && stock.symbol;
           } catch (e) {
             console.warn("Invalid stock entry:", stock);
             return false;
           }
         })
-        .slice(0, maxResults)
         .map((stock) => stock.symbol)
-        .filter(Boolean); // Remove undefined symbols
+        .filter(Boolean);
+
+      if (filteredStocks.length < maxRec) {
+        console.warn(
+          "Not enough stocks found with current filters, relaxing criteria"
+        );
+
+        filteredStocks = response.data
+          .filter((stock) => stock && stock.symbol)
+          .map((stock) => stock.symbol)
+          .slice(0, maxResults);
+      }
 
       if (filteredStocks.length === 0) {
         throw new Error(
-          "No stocks match your criteria. Try expanding your filters."
+          "No stocks match your criteria. Try expanding your filters or select 'All' for sector."
         );
       }
 
-      // 6. Get recommendations with validation
-      const recommendationResponse = await getStockRecommendation(
-        filteredStocks,
-        horizon
+      console.log(
+        `Using ${filteredStocks.length} filtered stocks for recommendation`
       );
 
-      if (!recommendationResponse?.recommendations) {
-        throw new Error("Recommendation service unavailable - try again later");
+      const BATCH_SIZE = 15;
+      let allRecommendations = [];
+
+      for (
+        let i = 0;
+        i < filteredStocks.length && allRecommendations.length < maxRec;
+        i += BATCH_SIZE
+      ) {
+        const batchSymbols = filteredStocks.slice(i, i + BATCH_SIZE);
+        console.log(
+          `Processing batch ${i / BATCH_SIZE + 1} with ${
+            batchSymbols.length
+          } symbols`
+        );
+
+        try {
+          const batchResponse = await getStockRecommendation(
+            batchSymbols,
+            horizon
+          );
+
+          if (batchResponse?.recommendations?.length > 0) {
+            allRecommendations = [
+              ...allRecommendations,
+              ...batchResponse.recommendations,
+            ];
+
+            if (allRecommendations.length >= maxRec) {
+              break;
+            }
+          }
+        } catch (batchError) {
+          console.warn(`Error in batch ${i / BATCH_SIZE + 1}:`, batchError);
+        }
       }
 
-      // 7. Safer processing with defaults
-      const recommendations = Array.isArray(
-        recommendationResponse.recommendations
-      )
-        ? recommendationResponse.recommendations
-        : [];
+      if (allRecommendations.length === 0) {
+        throw new Error(
+          "Could not generate recommendations. Please try different filters."
+        );
+      }
 
-      const processedRecommendations = recommendations
+      const processedRecommendations = allRecommendations
         .filter((rec) => {
           try {
             const sentimentScore = rec.details?.sentiment?.score || 0;
-            const dataPoints = rec.details?.stock_data?.data_points || 0;
-            return sentimentScore * 100 >= (confidence || 0) && dataPoints >= 5;
+            return sentimentScore * 100 >= (confidence || 0);
           } catch (e) {
             return false;
           }
@@ -216,12 +280,40 @@ export default function ExploreStocks() {
         .slice(0, maxRec);
 
       if (processedRecommendations.length === 0) {
+        const fallbackRecommendations = allRecommendations
+          .sort((a, b) => (b.score || 0) - (a.score || 0))
+          .slice(0, maxRec);
+
+        if (fallbackRecommendations.length > 0) {
+          console.log(
+            "Using fallback recommendations without confidence filter"
+          );
+          router.push({
+            pathname: "/explore_recommendations",
+            params: {
+              data: JSON.stringify({
+                recommendations: fallbackRecommendations,
+                filters: {
+                  sector: selectedSector,
+                  minCost: minCost || "0",
+                  maxCost: maxCost || "Any",
+                  confidence: "0",
+                  horizon,
+                },
+              }),
+            },
+          });
+          return;
+        }
+
         throw new Error(
-          `No recommendations meet your confidence level (${confidence}%). Try lowering the confidence threshold.`
+          "No recommendations meet your criteria. Try lowering the confidence threshold."
         );
       }
 
-      // 8. Safer navigation params
+      console.log(
+        `Found ${processedRecommendations.length} recommendations that match criteria`
+      );
       router.push({
         pathname: "/explore_recommendations",
         params: {
@@ -352,7 +444,6 @@ export default function ExploreStocks() {
           }}
         />
 
-        {/* New max recommendations input */}
         <Text style={styles.labelText}>Max Recommendations</Text>
         <TextInput
           value={maxRecommendations}
@@ -463,11 +554,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
     shadowRadius: 15,
-    elevation: 4, // For Android
+    elevation: 4,
     alignSelf: "center",
   },
   stockHeader: {
-    marginHorizontal: -24, // Offset the parent's padding
+    marginHorizontal: -24,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     marginTop: -24,
