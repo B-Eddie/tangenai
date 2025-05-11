@@ -12,6 +12,7 @@ export const APIContext = createContext(API_URL);
 export default function Layout() {
   return (
     <PaperProvider theme={theme}>
+      <Analytics />
       <APIContext.Provider value={API_URL}>
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
