@@ -1,7 +1,8 @@
 import { Stack } from "expo-router";
 import { PaperProvider } from "react-native-paper";
-import { createContext } from 'react';
+import { createContext } from "react";
 import { theme } from "../components/theme";
+import { Analytics } from "@vercel/analytics/react";
 
 export const API_URL = "https://moc.hackclub.app/recommend";
 // export const API_URL = "http://127.0.0.1:32771/recommend";
@@ -13,16 +14,13 @@ export default function Layout() {
     <PaperProvider theme={theme}>
       <APIContext.Provider value={API_URL}>
         <Stack>
-          <Stack.Screen 
-            name="(tabs)" 
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="recommendations"
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="recommendations" 
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen 
-            name="explore_recommendations" 
+          <Stack.Screen
+            name="explore_recommendations"
             options={{ headerShown: false }}
           />
         </Stack>
